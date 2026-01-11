@@ -1,0 +1,114 @@
+[tool.poetry]
+name = "tdxpy"
+version = "0.2.7"
+description = "通达信数据读取接口."
+authors = ["bopo <ibopo@126.com>"]
+readme = "README.md"
+license = "MIT license"
+homepage = "https://www.mootdx.com/tdxpy"
+repository = "https://github.com/mootdx/tdxpy"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "*"
+
+
+[[tool.poetry.source]]
+name = "mirrors"
+url = "https://mirrors.ustc.edu.cn/pypi/web/simple"
+priority = "default"
+
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "explicit"
+
+
+
+[tool.poetry.group.dev.dependencies]
+pytest-datadir = "^1.5.0"
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+
+[tool.pytest.ini_option]
+testpaths = "tests"
+addopts = "-p no:warnings"
+log_cli_level = "DEBUG"
+log_cli = 1
+
+
+[tool.commitizen]
+tag_format = "v$version"
+annotated_tag = true
+changelog_file = "docs/history.md"
+changelog_incremental = true
+update_changelog_on_bump = true
+version_provider = "poetry"
+version_files = [
+    "tdxpy/__init__.py:__version__",
+]
+
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '\.pyi?$'
+
+
+[tool.coverage]
+skip_covered = true
+sort = "-cover"
+
+
+[tool.coverage.run]
+source = ["tdxpy"]
+branch = true
+omit = [
+    "tdxpy/parser/ext/*.py",
+    "tdxpy/exhq.py"
+]
+
+
+[tool.coverage.report]
+exclude_lines = [
+  # ignore abstract methods
+  "raise NotImplementedError",
+  "def __repr__"
+]
+
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+addopts = "-p no:warnings"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poe.tasks]
+venv = "poetry install --sync"
+lock = "poetry lock --no-update"
+
+test = "pytest -v"
+lint = "ruff check ./tdxpy/*.py"
+
+dist = "poetry build -v"
+bump = "cz bump --yes -ch -cc --increment"
+#{MAJOR,MINOR,PATCH}
