@@ -45,8 +45,9 @@ class GetInstrumentBars(BaseParser):
         for _ in range(ret_count):
             year, month, day, hour, minute, pos = get_datetime(self.category, body_buf, pos)
             open_price, high, low, close, position, trade, price = struct.unpack("<ffffIIf", body_buf[pos : pos + 28])
-
-            (amount,) = struct.unpack("f", body_buf[pos + 16 : pos + 16 + 4])
+            # EX K 线记录无成交额字段（28 字节 = OHLC + position + trade + price）——
+            # 原实现从 pos+16 读 float 实为 position 字节，输出垃圾值（9.76e-42），
+            # 2026-09-25 修正为 0 占位（与 EX 日线 reader「无成交额」语义一致）。
             pos += 28
 
             kline = OrderedDict(
@@ -64,7 +65,7 @@ class GetInstrumentBars(BaseParser):
                     ("hour", hour),
                     ("minute", minute),
                     ("datetime", "%d-%02d-%02d %02d:%02d" % (year, month, day, hour, minute)),
-                    ("amount", amount),
+                    ("amount", 0.0),
                 ]
             )
 

@@ -1,6 +1,7 @@
 # cython: language_level=3
 from tdxpy.base_socket_client import BaseSocketClient
 from tdxpy.base_socket_client import last_ack_time
+from tdxpy.constants import HANDSHAKE_MODE
 from tdxpy.parser.ext.ex_get_history_instrument_bars_range import GetHistoryInstrumentBarsRange
 from tdxpy.parser.ext.ex_get_history_minute_time_data import GetHistoryMinuteTimeData
 from tdxpy.parser.ext.ex_get_history_transaction_data import GetHistoryTransactionData
@@ -12,6 +13,7 @@ from tdxpy.parser.ext.ex_get_instrument_quote_list import GetInstrumentQuoteList
 from tdxpy.parser.ext.ex_get_markets import GetMarkets
 from tdxpy.parser.ext.ex_get_minute_time_data import GetMinuteTimeData
 from tdxpy.parser.ext.ex_get_transaction_data import GetTransactionData
+from tdxpy.parser.setup_commands import ExLoginCmd
 from tdxpy.parser.setup_commands import ExSetupCmd1
 
 """
@@ -34,7 +36,13 @@ Out[8]: 64.0
 
 class TdxExHq_API(BaseSocketClient):  # noqa
     def setup(self):
-        ExSetupCmd1(self.client).call_api()
+        if HANDSHAKE_MODE == "legacy":
+            self._cmd(ExSetupCmd1).call_api()
+        else:
+            # 2026+ 现代服务器实测：老 ExSetupCmd1 已失效（服务器不响应，或会话降级导致
+            # 后续 EX 命令全部返回空/被踢）。须用新版 login（cmd 0x2454 + 80 字节 body），
+            # login 后 EX 全部命令恢复正常，业务命令构包无需改动。
+            self._cmd(ExLoginCmd).call_api()
 
     @last_ack_time
     def get_markets(self):
@@ -42,7 +50,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         获得市场列表
         :return:
         """
-        cmd = GetMarkets(self.client)
+        cmd = self._cmd(GetMarkets)
         return cmd.call_api()
 
     @last_ack_time
@@ -51,7 +59,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         获取证券数量
         :return:
         """
-        cmd = GetInstrumentCount(self.client)
+        cmd = self._cmd(GetInstrumentCount)
         return cmd.call_api()
 
     @last_ack_time
@@ -62,7 +70,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param code:
         :return:
         """
-        cmd = GetInstrumentQuote(self.client)
+        cmd = self._cmd(GetInstrumentQuote)
         cmd.setParams(market, code)
         return cmd.call_api()
 
@@ -77,7 +85,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param count:
         :return:
         """
-        cmd = GetInstrumentBars(self.client)
+        cmd = self._cmd(GetInstrumentBars)
         cmd.setParams(category, market, code, start=start, count=count)
         return cmd.call_api()
 
@@ -90,7 +98,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param code:
         :return:
         """
-        cmd = GetMinuteTimeData(self.client)
+        cmd = self._cmd(GetMinuteTimeData)
         cmd.setParams(market, code)
         return cmd.call_api()
 
@@ -103,7 +111,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param date:
         :return:
         """
-        cmd = GetHistoryMinuteTimeData(self.client)
+        cmd = self._cmd(GetHistoryMinuteTimeData)
         cmd.setParams(market, code, date=date)
         return cmd.call_api()
 
@@ -117,7 +125,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param count:
         :return:
         """
-        cmd = GetTransactionData(self.client)
+        cmd = self._cmd(GetTransactionData)
         cmd.setParams(market, code, start=start, count=count)
         return cmd.call_api()
 
@@ -132,7 +140,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param count:
         :return:
         """
-        cmd = GetHistoryTransactionData(self.client)
+        cmd = self._cmd(GetHistoryTransactionData)
         cmd.setParams(market, code, date, start=start, count=count)
         return cmd.call_api()
 
@@ -146,7 +154,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param end:
         :return:
         """
-        cmd = GetHistoryInstrumentBarsRange(self.client)
+        cmd = self._cmd(GetHistoryInstrumentBarsRange)
         cmd.setParams(market, code, start, end)
         return cmd.call_api()
 
@@ -158,7 +166,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param count:
         :return:
         """
-        cmd = GetInstrumentInfo(self.client)
+        cmd = self._cmd(GetInstrumentInfo)
         cmd.setParams(start, count)
         return cmd.call_api()
 
@@ -172,7 +180,7 @@ class TdxExHq_API(BaseSocketClient):  # noqa
         :param count:
         :return:
         """
-        cmd = GetInstrumentQuoteList(self.client)
+        cmd = self._cmd(GetInstrumentQuoteList)
         cmd.setParams(market, category, start, count)
         return cmd.call_api()
 

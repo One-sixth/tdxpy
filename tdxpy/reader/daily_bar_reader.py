@@ -11,11 +11,19 @@ from tdxpy.reader.base_reader import TdxNotAssignVipdocPathException
 
 class TdxDailyBarReader(BaseReader):
     """
-    读取通达信日线数据
+    读取通达信日线数据（vipdoc/{sh,sz,bj}/lday/*.day，A股/指数/基金/债券，北交所同格式）
+
+    每条 32 字节 `<IIIIIfII`（低字节在前）：
+      date(u32 YYYYMMDD) | open,high,low,close(u32, ×100) | amount(f32, 单位元) | volume(u32, 股) | rsv(u32)
+
+    28~31 字节 rsv 考古结论（2026-09-15 全历史扫描 + API 除权对照，详见知识库《数据获取经验.md》）：
+      - 不是除权/股本标志（跨市场翻转日同步、与除权日零重合）
+      - 老数据段（~2010）：lo u16 = 前收盘×100（上市首日 = 发行价×100），hi=0
+      - 新数据段：仅 65536(hi=1)/0 两值，为写入批次标志，无解析价值
     """
 
-    # 交易所
-    SECURITY_EXCHANGE = ["sz", "sh"]
+    # 交易所（bj=北交所，2026-09-27 补：vipdoc bj\lday 同 32 字节格式，系数对齐管道实测）
+    SECURITY_EXCHANGE = ["sz", "sh", "bj"]
 
     # 股票类型
     SECURITY_TYPE = [
@@ -29,6 +37,8 @@ class TdxDailyBarReader(BaseReader):
         "SZ_INDEX",
         "SZ_FUND",
         "SZ_BOND",
+        "BJ_STOCK",
+        "BJ_INDEX",
     ]
 
     # todo 股票系数
@@ -43,6 +53,8 @@ class TdxDailyBarReader(BaseReader):
         "SZ_INDEX": [0.01, 1.0],
         "SZ_FUND": [0.001, 0.01],
         "SZ_BOND": [0.001, 0.01],
+        "BJ_STOCK": [0.01, 0.01],
+        "BJ_INDEX": [0.01, 1.0],
     }
 
     def generate_filename(self, code, exchange):
@@ -181,7 +193,7 @@ class TdxDailyBarReader(BaseReader):
             if code_head in ["39"]:
                 return "SZ_INDEX"
 
-            if code_head in ["15", "16"]:
+            if code_head in ["15", "16", "18"]:  # 18=REITs（1801xx，与 helper 09-17 实测版对齐）
                 return "SZ_FUND"
 
             if code_head in ["10", "11", "12", "13", "14"]:
@@ -197,11 +209,21 @@ class TdxDailyBarReader(BaseReader):
             if code_head in ["00", "88", "99"]:
                 return "SH_INDEX"
 
-            if code_head in ["50", "51"]:
+            if code_head in ["50", "51", "52", "53", "55", "56", "58"]:  # 沪市基金全段（与 helper 09-17 实测版对齐；58=科创ETF）
                 return "SH_FUND"
 
             if code_head in ["01", "10", "11", "12", "13", "14", "20"]:
                 return "SH_BOND"
 
+        if exchange == self.SECURITY_EXCHANGE[2]:
+            if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27=92×349/82×10/89×2/81×2，88/43/83 无文件）
+                return "BJ_STOCK"
+
+            if code_head in ["89"]:  # 89 段指数（899050 北证50 / 899601，系数同 SH_INDEX）
+                return "BJ_INDEX"
+
         logger.debug("Unknown security exchange !")
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"未登记的 vipdoc 交易所/代码段：exchange={exchange!r} code_head={code_head!r}（文件 {filename}）。"
+            "请在 TdxDailyBarReader.get_security_type 登记该段"
+        )

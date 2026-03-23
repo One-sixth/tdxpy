@@ -7,7 +7,10 @@ from tdxpy.parser.base import BaseParser
 
 class GetHistoryInstrumentBarsRange(BaseParser):
     def __init__(self, *args, **kvargs):
-        super().__init__(self, *args, **kvargs)
+        # 修复：原写法 super().__init__(self, *args, **kvargs) 将 self 重复传入，
+        # 导致 BaseParser.client 被错绑为 parser 自身而非 socket client，
+        # call_api 时无法发送/接收（2026-09-16 实测该命令恒返回空的原因之一）。
+        super().__init__(*args, **kvargs)
         self.seq_id = 1
 
     def setParams(self, market, code, date, date2):

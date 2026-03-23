@@ -33,7 +33,8 @@ class GetSecurityList(BaseParser):
             )
 
             code = code.decode("utf-8", errors="ignore")
-            name = name_bytes.decode("gbk", errors="ignore")
+            # 通达信 name 为定长 8 字节 GBK，尾部 \x00 填充（实测 '创业板\x00\x00'）——清洗掉
+            name = name_bytes.decode("gbk", errors="ignore").replace("\x00", "").strip()
 
             pre_close = get_volume(pre_close_raw)
             pos += 29

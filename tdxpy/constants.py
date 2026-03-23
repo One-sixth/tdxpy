@@ -1,4 +1,13 @@
 # cython: language_level=3
+import os
+
+# 在线协议握手模式（2026-09 通达信服务器协议升级实测，详见项目 MEMORY.md）：
+#   "new"    - 新式握手（cmd 0x000D 单条）+ 42 字节 K 线 payload（含 adjust/anchor 服务端复权字段）+ EX 新版 login。默认值，现代服务器实测可用。
+#   "legacy" - pytdx 传统三条 SETUP + 26 字节 K 线 payload + EX 老 ExSetupCmd1。仅老服务器/回退实验用：现代服务器上标准 K 线返回空、EX 市场全部返回空。
+# 可用环境变量 TDXPY_HANDSHAKE_MODE 覆盖。
+HANDSHAKE_MODE = os.environ.get("TDXPY_HANDSHAKE_MODE", "new").strip().lower()
+
+
 
 
 class TDXParams:
@@ -185,4 +194,6 @@ SECURITY_COEFFICIENT = {
     "SZ_INDEX": [0.01, 1.0],
     "SZ_FUND": [0.001, 0.01],
     "SZ_BOND": [0.0001, 0.01],
+    "BJ_STOCK": [0.01, 0.01],
+    "BJ_INDEX": [0.01, 1.0],
 }

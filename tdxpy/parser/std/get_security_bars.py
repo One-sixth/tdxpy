@@ -2,6 +2,7 @@
 import struct
 from collections import OrderedDict
 
+from tdxpy.constants import HANDSHAKE_MODE
 from tdxpy.helper import get_datetime
 from tdxpy.helper import get_price
 from tdxpy.helper import get_volume
@@ -9,38 +10,62 @@ from tdxpy.parser.base import BaseParser
 
 
 class GetSecurityBarsCmd(BaseParser):
-    def setParams(self, category, market, code, start, count):
+    def setParams(self, category, market, code, start, count, adjust=0):
         """
-
+        构建请求
         :param category:
         :param market:
         :param code:
         :param start:
         :param count:
+        :param adjust: 服务端复权模式：0=不复权 1=前复权 2=后复权（仅新协议 42 字节 payload 支持）
         """
         if type(code) is str:
             code = code.encode("utf-8")
 
         self.category = category
 
-        values = (
-            0x10C,
-            0x01016408,
-            0x1C,
-            0x1C,
-            0x052D,
-            market,
-            code,
-            category,
-            1,
-            start,
-            count,
-            0,
-            0,
-            0,
-        )  # I + I +  H total 10 zero
+        if HANDSHAKE_MODE == "legacy":
+            # pytdx 传统 26 字节 payload：现代服务器（2026-09 实测）已拒绝该格式，返回空数据
+            values = (
+                0x10C,
+                0x01016408,
+                0x1C,
+                0x1C,
+                0x052D,
+                market,
+                code,
+                category,
+                1,
+                start,
+                count,
+                0,
+                0,
+                0,
+            )  # I + I +  H total 10 zero
 
-        self.send_pkg = struct.pack("<HIHHHH6sHHHHIIH", *values)
+            self.send_pkg = struct.pack("<HIHHHH6sHHHHIIH", *values)
+        else:
+            # 2026+ 新协议 42 字节 payload（须搭配 NewHandshakeCmd 新式握手）：
+            # market(H) code(6s) category(H) parameter(H=1) start(H) count(H) adjust(H) anchor_date(I) + 20 字节 0 保留区
+            # 帧内两个 len 字段从 0x1C 改 0x2C。2026-09 真实服务器实测 day/1min/5min 全部正常返回。
+            values = (
+                0x10C,
+                0x01016408,
+                0x2C,
+                0x2C,
+                0x052D,
+                market,
+                code,
+                category,
+                1,
+                start,
+                count,
+                adjust,
+                0,
+            )
+
+            self.send_pkg = struct.pack("<HIHHHH6sHHHHHI", *values) + b"\x00" * 20
 
     def parseResponse(self, body_buf):
         """

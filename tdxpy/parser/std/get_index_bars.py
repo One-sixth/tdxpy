@@ -2,6 +2,7 @@
 import struct
 from collections import OrderedDict
 
+from tdxpy.constants import HANDSHAKE_MODE
 from tdxpy.helper import get_datetime
 from tdxpy.helper import get_price
 from tdxpy.helper import get_volume
@@ -9,7 +10,7 @@ from tdxpy.parser.base import BaseParser
 
 
 class GetIndexBarsCmd(BaseParser):
-    def setParams(self, category, market, code, start, count):
+    def setParams(self, category, market, code, start, count, adjust=0):
         """
 
         :param category:
@@ -17,29 +18,50 @@ class GetIndexBarsCmd(BaseParser):
         :param code:
         :param start:
         :param count:
+        :param adjust: 服务端复权模式：0=不复权 1=前复权 2=后复权（仅新协议 42 字节 payload 支持）
         """
         if type(code) is str:
             code = code.encode("utf-8")
 
         self.category = category
 
-        val = (
-            0x10C,
-            0x01016408,
-            0x1C,
-            0x1C,
-            0x052D,
-            market,
-            code,
-            category,
-            1,
-            start,
-            count,
-            0,
-            0,
-            0,
-        )  # I + I +  H total 10 zero
-        pkg = struct.pack("<HIHHHH6sHHHHIIH", *val)  # noqa
+        if HANDSHAKE_MODE == "legacy":
+            # pytdx 传统 26 字节 payload：现代服务器已拒绝该格式，返回空数据
+            val = (
+                0x10C,
+                0x01016408,
+                0x1C,
+                0x1C,
+                0x052D,
+                market,
+                code,
+                category,
+                1,
+                start,
+                count,
+                0,
+                0,
+                0,
+            )  # I + I +  H total 10 zero
+            pkg = struct.pack("<HIHHHH6sHHHHIIH", *val)  # noqa
+        else:
+            # 2026+ 新协议 42 字节 payload（须搭配 NewHandshakeCmd 新式握手），格式同 GetSecurityBarsCmd
+            val = (
+                0x10C,
+                0x01016408,
+                0x2C,
+                0x2C,
+                0x052D,
+                market,
+                code,
+                category,
+                1,
+                start,
+                count,
+                adjust,
+                0,
+            )
+            pkg = struct.pack("<HIHHHH6sHHHHHI", *val) + b"\x00" * 20  # noqa
 
         self.send_pkg = pkg
 

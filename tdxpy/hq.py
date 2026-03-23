@@ -6,8 +6,10 @@ import pandas as pd
 
 from tdxpy.base_socket_client import BaseSocketClient
 from tdxpy.base_socket_client import last_ack_time
+from tdxpy.constants import HANDSHAKE_MODE
 from tdxpy.constants import TDXParams
 from tdxpy.helper import time_frame
+from tdxpy.parser.setup_commands import NewHandshakeCmd
 from tdxpy.parser.setup_commands import SetupCmd1
 from tdxpy.parser.setup_commands import SetupCmd2
 from tdxpy.parser.setup_commands import SetupCmd3
@@ -32,12 +34,17 @@ from tdxpy.parser.std.get_xdxr_info import GetXdXrInfo
 
 class TdxHq_API(BaseSocketClient):  # noqa
     def setup(self):
-        SetupCmd1(self.client).call_api()
-        SetupCmd2(self.client).call_api()
-        SetupCmd3(self.client).call_api()
+        if HANDSHAKE_MODE == "legacy":
+            self._cmd(SetupCmd1).call_api()
+            self._cmd(SetupCmd2).call_api()
+            self._cmd(SetupCmd3).call_api()
+        else:
+            # 2026+ 现代服务器实测：老三条 SETUP 会话下 K 线命令(0x052D)返回空，
+            # 必须换新式握手（cmd 0x000D 单条）；分时/历史分时/分笔等老构包命令不受影响。
+            self._cmd(NewHandshakeCmd).call_api()
 
     @last_ack_time
-    def get_security_bars(self, category, market, code, start, count):
+    def get_security_bars(self, category, market, code, start, count, *, adjust=0):
         """
         # Notice：，如果一个股票当天停牌，那天的K线还是能取到，成交量为0
         :param category:
@@ -45,15 +52,17 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param code:
         :param start:
         :param count:
+        :param adjust: 服务端复权模式（2026+ 新协议 42 字节 payload 支持）：0=不复权 1=前复权 2=后复权。
+                       仅 HANDSHAKE_MODE="new" 时生效，legacy 模式下忽略（老 26 字节 payload 无此字段）。
         :return:
         """
-        cmd = GetSecurityBarsCmd(self.client, lock=self.lock)
-        cmd.setParams(category, market, code, start, count)
+        cmd = self._cmd(GetSecurityBarsCmd)
+        cmd.setParams(category, market, code, start, count, adjust=adjust)
 
         return cmd.call_api()
 
     @last_ack_time
-    def get_index_bars(self, category, market, code, start, count):
+    def get_index_bars(self, category, market, code, start, count, *, adjust=0):
         """
         指数时间线
         :param category:
@@ -61,10 +70,11 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param code:
         :param start:
         :param count:
+        :param adjust: 服务端复权模式，语义同 get_security_bars
         :return:
         """
-        cmd = GetIndexBarsCmd(self.client, lock=self.lock)
-        cmd.setParams(category, market, code, start, count)
+        cmd = self._cmd(GetIndexBarsCmd)
+        cmd.setParams(category, market, code, start, count, adjust=adjust)
 
         return cmd.call_api()
 
@@ -102,7 +112,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         ):
             all_stock = [all_stock]
 
-        cmd = GetSecurityQuotesCmd(self.client, lock=self.lock)
+        cmd = self._cmd(GetSecurityQuotesCmd)
         cmd.setParams(all_stock)
 
         return cmd.call_api()
@@ -114,7 +124,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param market:
         :return:
         """
-        cmd = GetSecurityCountCmd(self.client, lock=self.lock)
+        cmd = self._cmd(GetSecurityCountCmd)
         cmd.setParams(market)
 
         return cmd.call_api()
@@ -128,10 +138,18 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :return:
         """
         if market == TDXParams.MARKET_BJ:
-            warnings.warn("此接口暂时不支持北证A股", DeprecationWarning)
+            # 2026-09-27 实测：GetSecurityList(market=2) 会被现代服务器直接断连
+            # （BrokenPipe 10058，count 接口正常返回 385）——pytdx 遗留挡板保留。
+            # 北交所标的清单请走：get_security_count(2) + get_finance_info(2, code) 逐标的，
+            # 或品种表（instrument）已有全量 BSE 标的。
+            warnings.warn(
+                "北交所（market=2）列表接口被服务器断连（2026-09-27 实锤，非客户端问题）——"
+                "请用 get_security_count(2) + get_finance_info(2, code) 逐标的获取，或查品种表",
+                UserWarning,
+            )
             return None
 
-        cmd = GetSecurityList(self.client, lock=self.lock)
+        cmd = self._cmd(GetSecurityList)
         cmd.setParams(market, start)
 
         return cmd.call_api()
@@ -139,13 +157,28 @@ class TdxHq_API(BaseSocketClient):  # noqa
     @last_ack_time
     def get_minute_time_data(self, market, code):
         """
-        获取分钟线
+        获取当日分时数据（240 条）。
+
+        2026-09-16 父Agent 审查改版：新式握手会话下 0x0523 实时分时响应已升级
+        为新格式（头部插入 market+code 等字段，旧 skip=4 解析错位导致价格跑飞），
+        故 new 模式与 easy_tdx 同策略改走 0x0FB4 历史分时接口（传当天日期，
+        实测价格与 easy_tdx 基准一致）；老 0x0523 parser 保留给 legacy 模式
+        （老三条 SETUP 会话下响应仍为旧格式）。
         :param market:
         :param code:
         :return:
         """
-        cmd = GetMinuteTimeData(self.client, lock=self.lock)
-        cmd.setParams(market, code)
+        if HANDSHAKE_MODE == "legacy":
+            cmd = self._cmd(GetMinuteTimeData)
+            cmd.setParams(market, code)
+
+            return cmd.call_api()
+
+        from datetime import datetime
+
+        today = int(datetime.now().strftime("%Y%m%d"))
+        cmd = self._cmd(GetHistoryMinuteTimeData)
+        cmd.setParams(market, code, today)
 
         return cmd.call_api()
 
@@ -158,7 +191,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param date:
         :return:
         """
-        cmd = GetHistoryMinuteTimeData(self.client, lock=self.lock)
+        cmd = self._cmd(GetHistoryMinuteTimeData)
         cmd.setParams(market, code, date)
 
         return cmd.call_api()
@@ -177,7 +210,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
             warnings.warn("目前不是交易时间段, 此接口必须在交易时间才能使用", DeprecationWarning)
             return None
 
-        cmd = GetTransactionData(self.client, lock=self.lock)
+        cmd = self._cmd(GetTransactionData)
         cmd.setParams(market, code, start, count)
 
         return cmd.call_api()
@@ -193,7 +226,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param date:
         :return:
         """
-        cmd = GetHistoryTransactionData(self.client, lock=self.lock)
+        cmd = self._cmd(GetHistoryTransactionData)
         cmd.setParams(market, code, start, count, date)
 
         return cmd.call_api()
@@ -210,7 +243,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
             warnings.warn("此接口暂时不支持北证A股", DeprecationWarning)
             return None
 
-        cmd = GetCompanyInfoCategory(self.client, lock=self.lock)
+        cmd = self._cmd(GetCompanyInfoCategory)
         cmd.setParams(market, code)
 
         return cmd.call_api()
@@ -230,7 +263,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
             warnings.warn("此接口暂时不支持北证A股", DeprecationWarning)
             return None
 
-        cmd = GetCompanyInfoContent(self.client, lock=self.lock)
+        cmd = self._cmd(GetCompanyInfoContent)
         cmd.setParams(market, code, filename, start, length)
 
         return cmd.call_api()
@@ -243,7 +276,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param code:
         :return:
         """
-        cmd = GetXdXrInfo(self.client, lock=self.lock)
+        cmd = self._cmd(GetXdXrInfo)
         cmd.setParams(market, code)
 
         return cmd.call_api()
@@ -256,7 +289,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param code:
         :return:
         """
-        cmd = GetFinanceInfo(self.client, lock=self.lock)
+        cmd = self._cmd(GetFinanceInfo)
         cmd.setParams(market, code)
 
         return cmd.call_api()
@@ -268,7 +301,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param block_file:
         :return:
         """
-        cmd = GetBlockInfoMeta(self.client, lock=self.lock)
+        cmd = self._cmd(GetBlockInfoMeta)
         cmd.setParams(block_file)
 
         return cmd.call_api()
@@ -282,7 +315,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param size:
         :return:
         """
-        cmd = GetBlockInfo(self.client, lock=self.lock)
+        cmd = self._cmd(GetBlockInfo)
         cmd.setParams(block_file, start, size)
 
         return cmd.call_api()
@@ -303,7 +336,7 @@ class TdxHq_API(BaseSocketClient):  # noqa
         :param offset:
         :return:
         """
-        cmd = GetReportFile(self.client, lock=self.lock)
+        cmd = self._cmd(GetReportFile)
         cmd.setParams(filename, offset)
 
         return cmd.call_api()
@@ -340,10 +373,16 @@ class TdxHq_API(BaseSocketClient):  # noqa
 
     def get_k_data(self, code, start_date, end_date):
         """
-        巨 ugly 代码
-        :param code:
-        :param start_date:
-        :param end_date:
+        【已废弃】旧式便捷 K 线拉取（upstream pytdx 遗留）。
+
+        内部自带一套市场归属判定（"5"/"6"/"9" 前缀），与门面点分式规则不一致、
+        对指数/北交所/扩展市场不支持；且一次最多拼 10 段 × 800 根（约 21 个月）。
+        请改用统一门面：``TdxClient.auto().bars("sh.601919", period="day", all_pages=True)``
+        （点分式 symbol 自包含市场，指数自动路由，std/ex 通吃）。
+
+        :param code: 6 位代码（裸代码，市场按前缀猜）
+        :param start_date: 起始日期
+        :param end_date: 结束日期
         :return:
         """
 

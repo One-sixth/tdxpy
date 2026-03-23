@@ -2,8 +2,11 @@
 import abc
 import datetime
 import struct
+import time
 import zlib
 
+from tdxpy.exceptions import TdxFunctionCallError
+from tdxpy.exceptions import ValidationException
 from tdxpy.logger import logger
 
 try:
@@ -55,8 +58,12 @@ class BaseParser:
         self.rsp_header = None
         self.rsp_body = None
 
-        self.client = client
+        self.client = client  # 底层 socket（TrafficStatSocket）
         self.lock = lock or None
+        # API 实例引用（BaseSocketClient 子类），由 _cmd 工厂注入。
+        # retry 分支需要访问 auto_retry/retry_strategy/disconnect/connect/raise_exception，
+        # 这些都在 API 实例上——直接构造 parser（绕过工厂）时为 None，retry 降级。
+        self.api = None
 
         self.category = None
 
@@ -105,18 +112,69 @@ class BaseParser:
         pass
 
     def call_api(self):
-        """
+        """发送请求并解析响应；失败时按客户端的重试策略重连重发。
 
-        :return:
+        锁保护范围：call_api 持有连接锁时，发送+接收+重连+重发全部原子化——
+        多线程共享连接场景下，重连不会与其他线程的在途查询互相踩踏。
         """
         if self.lock:
             with self.lock:
                 logger.debug("sending thread lock api call")
-                result = self._call_api()
-        else:
-            result = self._call_api()
+                return self._call_with_retry()
+        return self._call_with_retry()
 
-        return result
+    def _call_with_retry(self):
+        """单次命令执行 + 自动重试（调用方须已持锁）。
+
+        重试语义（2026-09-20 从 last_ack_time 装饰器下沉到此）：
+        - TypeError/ValueError → ValidationException（参数错误，重试无意义）
+        - 其他异常：auto_retry 开启且 socket 存在时按 retry_strategy 重连重发；
+          全部失败后按 raise_exception 决定抛出 TdxFunctionCallError 或返回 None。
+        - api 为 None（直接构造 parser、绕过 _cmd 工厂）时 retry/异常语义降级：
+          不重试、不吞异常，原样上抛。
+
+        注意：self.client 是底层 socket；API 实例引用在 self.api（_cmd 工厂注入）。
+        """
+        try:
+            return self._call_api()
+        except (TypeError, ValueError) as e:
+            raise ValidationException(*e.args)
+        except Exception as e:
+            current_exception = e
+            api = self.api
+
+            if api is None:
+                raise
+
+            if api.auto_retry and api.client:
+                for time_interval in api.retry_strategy.generate():
+                    logger.debug(f"auto retry in {time_interval}s, exception is {e}")
+                    time.sleep(time_interval)
+
+                    try:
+                        api.disconnect()
+                    except Exception as retry_disconnect_e:
+                        # 旧 socket 可能已被外部 close（shutdown 抛 OSError）——disconnect 内部
+                        # finally 已把 self.client 置 None，清理失败不影响重连，忽略即可。
+                        logger.debug(f"disconnect on retry failed (ignored): {retry_disconnect_e}")
+                    api.connect(api.ip, api.port)
+                    # 重连后 API 换了新 socket，parser 必须刷新引用，否则重发仍走旧 socket
+                    self.client = api.client
+
+                    try:
+                        return self._call_api()
+                    except Exception as retry_e:
+                        logger.debug(f"hit exception on *retry* req exception is {retry_e}")
+                        current_exception = retry_e
+
+                logger.debug("perform auto retry on req ")
+
+            if api.raise_exception:
+                to_raise = TdxFunctionCallError("calling function error")
+                to_raise.original_exception = current_exception
+                raise to_raise
+
+            return None
 
     def _call_api(self):
         """

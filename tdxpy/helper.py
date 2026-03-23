@@ -4,6 +4,7 @@ from datetime import datetime
 
 from tdxpy.constants import SECURITY_COEFFICIENT
 from tdxpy.logger import logger
+from tdxpy.markets import StdMarket
 
 
 def get_price(data, pos):
@@ -53,6 +54,11 @@ def get_volume(vol):
     :param vol:
     :return:
     """
+    if vol == 0:
+        # 0 字节直接归零：否则按位运算算出 2^-127 ≈ 5.877e-39 的浮点垃圾
+        # （指数基日等无成交记录的 bar 实测触发，2026-09-25 修复）
+        return 0.0
+
     logpoint = vol >> (8 * 3)
 
     hleax = (vol >> (8 * 2)) & 0xFF  # [2]
@@ -168,29 +174,34 @@ def index_bytes(data, pos):
 
 # TODO 增加 get_coefficient 函数
 def get_security_coefficient(market=None, code=None):
-    try:
-        security_type = get_security_type(market=market, code=code)
-        coefficient = SECURITY_COEFFICIENT[security_type]
-        return coefficient[0]
-    except NotImplementedError:
-        logger.error('NotImplementedError')
-        return 0.01
+    """按 (market, code) 查快照/分时价格系数。
+
+    未知代码段直接 raise NotImplementedError（绝不静默回退 0.01——
+    静默回退曾导致 58 段科创ETF/18 段REITs 快照价格 ×10，2026-09-17 修复）。
+    """
+    security_type = get_security_type(market=market, code=code)
+    return SECURITY_COEFFICIENT[security_type][0]
 
 
 def get_security_type(market, code):
     """
     获取股票类型, A股, B股, 指数等
 
-    :param market: 市场
+    :param market: 市场（StdMarket 成员 / "sh"/"sz"/"bj" / 0/1/2 / 中文昵称）
     :param code: 代码
     :return:
     """
+    try:
+        market_id = int(StdMarket(market))
+    except ValueError:
+        raise NotImplementedError(
+            f"未知市场 {market!r}：支持 StdMarket 成员 / 'sh'/'sz'/'bj' / 0/1/2"
+        )
 
-    # code = Path(code).stem
     code = str(code)
     code_head = str(code)[:2]
 
-    if market in ["SZ", "sz", 0]:
+    if market_id == StdMarket.SZ:
         if code_head in ["00", "30"]:
             return "SZ_A_STOCK"
 
@@ -200,13 +211,13 @@ def get_security_type(market, code):
         if code_head in ["39"]:
             return "SZ_INDEX"
 
-        if code_head in ["15", "16"]:
+        if code_head in ["15", "16", "18"]:  # 18=REITs（1801xx，2026-09-17 实测 raw×1000）
             return "SZ_FUND"
 
         if code_head in ["10", "11", "12", "13", "14"]:
             return "SZ_BOND"
 
-    if market in ["SH", "sh", 1]:
+    if market_id == StdMarket.SH:
         if code_head in ["60", "68"]:  # 688XXX科创板
             return "SH_A_STOCK"
 
@@ -216,14 +227,24 @@ def get_security_type(market, code):
         if code_head in ["00", "88", "99"]:
             return "SH_INDEX"
 
-        if code_head in ["50", "51"]:
+        if code_head in ["50", "51", "52", "53", "55", "56", "58"]:  # 沪市基金全段（50/51 ETF、56 中证系、58 科创ETF；52/53/55 LOF/封基）
             return "SH_FUND"
 
         if code_head in ["01", "10", "11", "12", "13", "14", "20"]:
             return "SH_BOND"
 
+    if market_id == StdMarket.BJ:
+        if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27 段分布=92/82/89/81，88/43/83 无文件）
+            return "BJ_STOCK"
+
+        if code_head in ["89"]:  # 89 段指数（899050 北证50 等，系数同 SH_INDEX）
+            return "BJ_INDEX"
+
     logger.debug("Unknown security exchange !")
-    raise NotImplementedError
+    raise NotImplementedError(
+        f"未登记的品种代码段：market={market!r} code={code!r}（价格系数未知，拒绝猜测）。"
+        "请在 tdxpy.helper.get_security_type 与 tdxpy.constants.SECURITY_COEFFICIENT 登记该代码段"
+    )
 
 
 def dump(buf):

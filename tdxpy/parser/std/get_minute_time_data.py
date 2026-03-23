@@ -18,6 +18,12 @@ class GetMinuteTimeData(BaseParser):
         :param market: 市场
         :param code: 代码
         """
+        # 2026-09-16 父Agent 审查修复：coefficient 判定必须在 encode 之前用原始 str code。
+        # 历史 bug：原写法在 encode 之后调用，bytes 经 str() 变为 "b'601919'"，
+        # get_security_type 恒抛 NotImplementedError → 恒 fallback 0.01 →
+        # ETF(0.001)/转债(0.0001) 分时价格被放大 10/100 倍。
+        self.coefficient = get_security_coefficient(market=market, code=code)
+
         if type(code) is str:
             code = code.encode("utf-8")
 
@@ -25,7 +31,6 @@ class GetMinuteTimeData(BaseParser):
         pkg.extend(struct.pack("<H6sI", market, code, 0))
 
         self.send_pkg = pkg
-        self.coefficient = get_security_coefficient(market=market, code=code)
 
     def parseResponse(self, body_buf):
         pos = 0

@@ -39,7 +39,7 @@ class GetInstrumentQuoteList(BaseParser):
         pos += 2
 
         if self.category not in [2, 3]:
-            return NotImplementedError("暂时不支持期货,港股之外的品类")
+            raise NotImplementedError("暂时不支持期货,港股之外的品类")
 
         for _ in range(num):
             # 每个块一共300bytes

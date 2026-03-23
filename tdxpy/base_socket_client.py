@@ -22,7 +22,13 @@ RECV_HEADER_LEN = 0x10
 
 def last_ack_time(func):
     """
-    装饰器: 更新最后 ack 时间
+    装饰器: 更新最后 ack 时间 + 统一异常语义
+
+    自动重试已下沉到 parser/base.py `_call_with_retry`（命令发送失败→重连→重发，
+    全程持有连接锁；多线程下重连与其他线程查询互斥）。本装饰器只负责：
+    - 更新 self.last_ack_time（心跳判活用）
+    - 参数错误 (TypeError/ValueError) → ValidationException
+    - 其他异常按 raise_exception 开关：True=抛 TdxFunctionCallError，False=返回 None
     :param func:
     :return:
     """
@@ -33,44 +39,23 @@ def last_ack_time(func):
 
         logger.debug(f"last ack time update to {self.last_ack_time}")
 
-        ret = None
-
         try:
-            ret = func(self, *args, **kw)
+            return func(self, *args, **kw)
+        except (ValidationException, TdxFunctionCallError):
+            # 这两个已在 parser/_call_with_retry 完成语义转换，直接透传（保持 original_exception 链）
+            raise
         except (TypeError, ValueError) as e:
             raise ValidationException(*e.args)
         except Exception as e:
             # logger.exception(e)
-            current_exception = e
             logger.debug(f"hit exception on req exception is {e}")
 
-            if self.auto_retry and self.client:
-                for time_interval in self.retry_strategy.generate():
-                    try:
-                        time.sleep(time_interval)
-
-                        self.disconnect()
-                        self.connect(self.ip, self.port)
-
-                        ret = func(self, *args, **kw)
-                        return ret
-
-                    except Exception as retry_e:
-                        logger.debug(f"hit exception on *retry* req exception is {retry_e}")
-                        current_exception = retry_e
-
-                logger.debug("perform auto retry on req ")
-
-            # 最后交易失败
-            # self last_transaction_failed is True
-
-            # 如果 raise_exception=True 抛出异常
             if self.raise_exception:
                 to_raise = TdxFunctionCallError("calling function error")
-                to_raise.original_exception = current_exception
+                to_raise.original_exception = e
                 raise to_raise
 
-        return ret
+        return None
 
     return wrapper
 
@@ -126,7 +111,7 @@ class BaseSocketClient:
         self.closed = True
         self.client = None
 
-        self.lock = (multithread or heartbeat) and threading.Lock() or None
+        self.lock = (multithread or heartbeat) and threading.RLock() or None
 
         self.heartbeat = heartbeat
         self.heartbeat_thread = None
@@ -217,8 +202,11 @@ class BaseSocketClient:
 
             try:
                 self.client.shutdown(socket.SHUT_RDWR)
+            except Exception as e:
+                # 半开/未完成连接的 socket shutdown 必失败——降级继续 close，防止 fd 泄漏
+                logger.debug(f"shutdown err: {e}")
+            try:
                 self.client.close()
-                self.client = None
             except Exception as e:
                 logger.debug(f"disconnect err: {e}")
                 if self.raise_exception:
@@ -233,13 +221,30 @@ class BaseSocketClient:
         disconnect的别名，为了支持 with closing(obj): 语法
         :return:
         """
-        self.disconnect()
+        if self.client:
+            self.disconnect()
+
+    def _cmd(self, cmd_cls):
+        """创建协议命令对象并自动注入连接锁与 API 引用。
+
+        所有命令（含 setup 握手）必须经此工厂创建——锁的注入集中在此一处，
+        根除 hq/exhq/setup 各点手写 ``lock=self.lock`` 造成的不对称与遗漏
+        （2026-09-20 修复：TdxExHq_API 曾全部漏传锁，多线程共享连接必撕裂）。
+        同时注入 ``cmd.api = self``：parser 的 self.client 是底层 socket，
+        retry/异常语义所需的 auto_retry/raise_exception 等属性在 API 实例上。
+        """
+        cmd = cmd_cls(self.client, lock=self.lock)
+        cmd.api = self
+        return cmd
 
     def get_traffic_stats(self):
         """
         获取流量统计的信息
         :return:
         """
+        if self.client is None:
+            return None
+
         if self.client.first_pkg_send_time is not None:
             total_seconds = (datetime.datetime.now() - self.client.first_pkg_send_time).total_seconds()
 
@@ -275,7 +280,7 @@ class BaseSocketClient:
         :param pkg:
         :return:
         """
-        cmd = RawParser(self.client, lock=self.lock)
+        cmd = self._cmd(RawParser)
         cmd.setParams(pkg)
 
         return cmd.call_api()
