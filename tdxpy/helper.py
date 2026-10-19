@@ -214,12 +214,20 @@ def get_security_type(market, code):
         if code_head in ["15", "16", "18"]:  # 18=REITs（1801xx，2026-09-17 实测 raw×1000）
             return "SZ_FUND"
 
-        if code_head in ["10", "11", "12", "13", "14"]:
+        if code_head == "14":  # 2026-11-05 修正：14 段实为优先股（宁行优01 等，dp=2）——
+            return "SZ_PREFERRED"  # 曾误吞进 SZ_BOND 致价格 ×100 偏差（audit_price_scale 实锤）
+
+        # 10-13 转债/债券；19/50/52/56 地方债/ABS/公司债（2026-11-05 LOW 批次登记，
+        # 全量 security_list dp=4 + MAC K线恒等式 amount/(vol×close)=10（手）实测）
+        if code_head in ["10", "11", "12", "13", "19", "50", "52", "56"]:
             return "SZ_BOND"
 
     if market_id == StdMarket.SH:
-        if code_head in ["60", "68"]:  # 688XXX科创板
+        if code_head in ["60", "68", "78"]:  # 688XXX科创板；78=科创板新股申购段（787827 等，2026-11-05 登记）
             return "SH_A_STOCK"
+
+        if code_head == "36":  # 2026-11-05 登记：36 段优先股（农行优1 等，dp=2）
+            return "SH_PREFERRED"
 
         if code_head in ["90"]:
             return "SH_B_STOCK"
@@ -230,12 +238,26 @@ def get_security_type(market, code):
         if code_head in ["50", "51", "52", "53", "55", "56", "58"]:  # 沪市基金全段（50/51 ETF、56 中证系、58 科创ETF；52/53/55 LOF/封基）
             return "SH_FUND"
 
-        if code_head in ["01", "10", "11", "12", "13", "14", "20"]:
+        # 01 国债回购定价/10-14 转债可交换债、20 贴债整理；02 贴现国债、15-19/23/24/27
+        # 地方政府债/公司债/城投债（2026-11-05 LOW 批次登记：全量 security_list dp=4 +
+        # MAC K线恒等式 amount/(vol×close)=10（手）三段实测；SH 79 段"资金控制"为交易所
+        # 内部占用段，保持 raise 防御不登记）
+        if code_head in ["01", "02", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "23", "24", "27"]:
             return "SH_BOND"
 
     if market_id == StdMarket.BJ:
-        if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27 段分布=92/82/89/81，88/43/83 无文件）
+        if code_head in ["43", "83", "87", "88", "92"]:  # 北交所股票段（92 现役；43/83/87/88 老三板/历史，防御保留）
             return "BJ_STOCK"
+
+        # 2026-10-19 官方规测定性（北证公告〔2024〕20号《证券代码、证券简称编制指引》）：
+        #   810 首三位 = 向特定对象发行可转换公司债券（简称后四位"定转"）；vipdoc 实测 810011/810014 价格贴面值 100、raw×10000
+        #   820 首三位（老版"首两位 82"）= 优先股；vipdoc 现役文件全为 821xxx，同为固收类精度
+        #   80/811+ 号段 = 政府债券（北交所《启用政府债券代码号段的通知》）——不登记，raise 防御
+        if str(code)[:3] == "810":
+            return "BJ_BOND"
+
+        if code_head == "82":
+            return "BJ_PREFERRED"
 
         if code_head in ["89"]:  # 89 段指数（899050 北证50 等，系数同 SH_INDEX）
             return "BJ_INDEX"

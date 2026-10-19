@@ -31,6 +31,9 @@ class GetInstrumentQuoteList(BaseParser):
 
         data_list = []
 
+        if len(body_buf) < 2:
+            raise ValueError(f"quote_list 响应过短：{len(body_buf)}B（至少需 2B 数量头）")
+
         (num,) = struct.unpack("<H", body_buf[pos : pos + 2])
 
         if num == 0:
@@ -41,6 +44,15 @@ class GetInstrumentQuoteList(BaseParser):
         if self.category not in [2, 3]:
             raise NotImplementedError("暂时不支持期货,港股之外的品类")
 
+        # 2026-11-09 新增块长校验：每块固定 300B（10B market+code + 290B 数据）。
+        # 传输层只保证「收到头声明的字节数」，不保证 body 内 num 与长度自洽——
+        # 缺此校验时末块截断会静默返回错位/垃圾数据（struct.unpack 短 buffer 只解前
+        # 140B 也算成功），num 虚高则读出空 code 的垃圾条目。异常即报错，不静默降级。
+        need = 2 + num * 300
+        if len(body_buf) < need:
+            raise ValueError(
+                f"quote_list 响应长度不足：num={num} 需 {need}B，实际 {len(body_buf)}B")
+
         for _ in range(num):
             # 每个块一共300bytes
             market, code = struct.unpack("<B9s", body_buf[pos : pos + 10])
@@ -48,11 +60,9 @@ class GetInstrumentQuoteList(BaseParser):
             pos += 10
 
             if self.category == 3:
-                try:
-                    pos = self.extract_futures(market, code, body_buf, data_list, pos)
-                except Exception as e:
-                    logger.exception(e)
-
+                # 2026-11-09：解析异常不再静默吞掉——格式变更时让调用方看到错误，
+                # 而不是把「解析坏了」伪装成「该市场只有前几条数据」。
+                pos = self.extract_futures(market, code, body_buf, data_list, pos)
                 logger.debug(pos)
 
             elif self.category == 2:
@@ -235,4 +245,7 @@ class GetInstrumentQuoteList(BaseParser):
 
         datalist.append(one)
 
-        return datalist
+        # 2026-11-09 修复：原为 `return datalist`——调用方用本返回值作为下一块的
+        # 起始偏移（pos），list + int 会抛 "can only concatenate list (not int)"，
+        # 表现为期货市场（category=3）quote_list 全部失败。港股分支返回的也是 pos。
+        return pos

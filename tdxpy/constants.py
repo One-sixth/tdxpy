@@ -174,12 +174,18 @@ SECURITY_TYPE = [
     "SH_B_STOCK",
     "SH_INDEX",
     "SH_FUND",
+    "SH_PREFERRED",
     "SH_BOND",
     "SZ_A_STOCK",
     "SZ_B_STOCK",
     "SZ_INDEX",
     "SZ_FUND",
+    "SZ_PREFERRED",
     "SZ_BOND",
+    "BJ_STOCK",
+    "BJ_BOND",
+    "BJ_PREFERRED",
+    "BJ_INDEX",
 ]
 
 # todo 股票系数
@@ -194,6 +200,15 @@ SECURITY_COEFFICIENT = {
     "SZ_INDEX": [0.01, 1.0],
     "SZ_FUND": [0.001, 0.01],
     "SZ_BOND": [0.0001, 0.01],
+    # 2026-11-05 LOW 批次登记：优先股段（audit_price_scale 首秀实锤——SZ 14 段曾误吞进
+    # SZ_BOND，宁行优01 last_close 显示 1.0296 实为 102.96 元 ×100 偏差；K 线恒等式
+    # amount=vol×close 成立=vol 单位股，与股票同构故 vol 系数 0.01）
+    "SZ_PREFERRED": [0.01, 0.01],
+    # SH 36 段（农行优1 等，dp=2；段内近 20 日无成交，vol 系数沿沪股同构外推）
+    "SH_PREFERRED": [0.01, 0.01],
     "BJ_STOCK": [0.01, 0.01],
+    # 2026-10-19 登记：810 定向可转债 / 82 优先股，vipdoc+在线分时实测 raw×10000（贴面值 100）
+    "BJ_BOND": [0.0001, 1.0],
+    "BJ_PREFERRED": [0.0001, 1.0],
     "BJ_INDEX": [0.01, 1.0],
 }

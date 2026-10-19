@@ -10,6 +10,7 @@
 运行：
     python tests/test_server_guard.py -v
 """
+import datetime as dt
 import os
 import sys
 import unittest
@@ -27,18 +28,24 @@ VIPDOC_BJ_LDAY = Path(os.environ.get(
     r"D:\Software\证券\通达信金融终端-量化模拟\vipdoc\bj\lday",
 ))
 
-ANCHOR_DATE = "2026-09-24"
+#: 离线 vipdoc 静态锚点（本机缓存不会滚动，固定日期 + 固定收盘价 = reader 系数守护）。
+#: 在线日线用例自 2026-11-09 起改为「动态锚点 + 新鲜度 + 双通道交叉验证」，
+#: 因为板块日线只能取最近 N 根，静态锚点会随时间滑出窗口（2026-10-15 曾因此误红）。
+ANCHOR_DATE = "2026-10-15"
 ANCHOR_TICK_DATE = 20260923
-BJ_STOCK_920992_CLOSE = 12.98
-BJ_INDEX_899050_CLOSE = 1055.74
+BJ_STOCK_920992_CLOSE = 12.46
+BJ_INDEX_899050_CLOSE = 967.51
 BJ_STOCK_920992_TICKS = 1990
 BJ_INDEX_899050_TICKS = 2842
 BJ_SECURITY_COUNT_MIN = 385
 BJ_LIST_BANNER = "北交所（market=2）列表接口被服务器断连"
 BJ_SEG_MIN = {"81": 2, "82": 10, "89": 2, "92": 349}
-BJ_BOND_821001_DATE = "2026-04-27"
-# 82 段系数坑现状钉住：离线读数（错 100 倍）vs 在线口径 100.744。修复 reader 后此锚点应更新。
-BJ_BOND_821001_PINNED_CLOSE = 10074.4
+BJ_PREFERRED_821001_DATE = "2026-04-27"
+# 2026-10-19 系数坑已修复（BJ_PREFERRED 0.0001）：离线/在线分时均应为在线日线口径 100.744
+BJ_PREFERRED_821001_CLOSE = 100.744
+
+#: 在线日线「新鲜度」阈值（自然日）：覆盖最长连休（春节 9 天）+ 余量。
+GUARD_MAX_STALE_DAYS = 15
 
 
 def _connect_or_skip(api):
@@ -53,14 +60,6 @@ def _connect_or_skip(api):
         print(f"\n⚠️⚠️⚠️ guard 无法连接 {HQ_HOST}:{HQ_PORT}——服务端不可达或网络异常", file=sys.stderr)
         raise unittest.SkipTest(f"无法连接 {HQ_HOST}:{HQ_PORT}")
     return api
-
-
-def _close_on_date(api, fetch, date):
-    """在返回的 bar 序列里找 date 当日 close；找不到返回 None。"""
-    for b in fetch() or []:
-        if str(b["datetime"]).startswith(date):
-            return float(b["close"])
-    return None
 
 
 def _tick_total(api, code, date, market=2, page=800, max_pages=10):
@@ -88,15 +87,53 @@ class TestBjGuard(unittest.TestCase):
     def tearDownClass(cls):
         cls.api.disconnect()
 
+    def _guard_recent_daily(self, fetch, code, label=None):
+        """在线日线数据面守护（动态锚点，自动跟随最近交易日）。
+
+        守什么：
+        - 数据面存在：最近 10 根里至少 5 根
+        - 最新未断更：最新 bar 距今 <= GUARD_MAX_STALE_DAYS
+        - 序列健康：日期单调递增且不重复、收盘价全为正
+        - 双通道一致：T-1（已收盘）日线 close 与当日历史分时末点价格一致
+          （分时为空时 skip 该子断言，不因此误红）
+
+        绝对值基线不在这里——由离线 vipdoc 用例（固定日期 + 固定价）承担。
+        """
+        label = label or code
+        bars = fetch() or []
+        self.assertGreaterEqual(len(bars), 5, f"{label} 最近日线不足 5 根——数据面消失？")
+        dates = [str(b["datetime"])[:10] for b in bars]
+        closes = [float(b["close"]) for b in bars]
+        self.assertTrue(all(c > 0 for c in closes), f"{label} 收盘价出现非正值：{closes}")
+        self.assertEqual(dates, sorted(dates), f"{label} bar 日期非单调递增：{dates}")
+        self.assertEqual(len(set(dates)), len(dates), f"{label} bar 日期重复：{dates}")
+        latest = dt.date.fromisoformat(dates[-1])
+        stale = (dt.date.today() - latest).days
+        self.assertLessEqual(
+            stale, GUARD_MAX_STALE_DAYS,
+            f"{label} 最新 bar {dates[-1]} 距今 {stale} 天（阈值 {GUARD_MAX_STALE_DAYS}）——疑似断更")
+        # T-1 已收盘；len>=5 已在上面断言，这里的 else 分支不可达（防御性保留）
+        ti = len(bars) - 2 if len(bars) >= 2 else len(bars) - 1
+        day = dates[ti]
+        day_close = closes[ti]
+        minute = self.api.get_history_minute_time_data(2, code, day.replace("-", ""))
+        if not minute:
+            # 分时为空不改变用例结论：日线断言（存在 / 新鲜度 / 序列健康）已通过。
+            # 用 warn + return 而非 skipTest——skip 会让「守护被永久静默关闭」难以在
+            # CI 的 pass/fail/skip 计数里察觉；这里保持 pass 并留可见警告。
+            print(f"\n⚠️ {label} {day} 历史分时为空——本次跳过分时交叉验证（日线断言已通过）",
+                  file=sys.stderr)
+            return
+        self.assertEqual(len(minute), 240, f"{label} {day} 历史分时点数 {len(minute)} != 240")
+        self.assertAlmostEqual(
+            float(minute[-1]["price"]), day_close, places=2,
+            msg=f"{label} {day} 日线 close={day_close} 与分时末点 {minute[-1]['price']} 漂移——双通道不一致")
+
     def test_bj_stock_920992_close(self):
-        c = _close_on_date(self.api, lambda: self.api.get_security_bars(4, 2, "920992", 0, 10), ANCHOR_DATE)
-        self.assertIsNotNone(c, f"{ANCHOR_DATE} 的 920992 bar 未返回——BJ 数据面消失？")
-        self.assertAlmostEqual(c, BJ_STOCK_920992_CLOSE, places=2, msg="920992 close 漂移——服务端格式/数据变更？")
+        self._guard_recent_daily(lambda: self.api.get_security_bars(4, 2, "920992", 0, 10), "920992")
 
     def test_bj_index_899050_close(self):
-        c = _close_on_date(self.api, lambda: self.api.get_index_bars(4, 2, "899050", 0, 10), ANCHOR_DATE)
-        self.assertIsNotNone(c, f"{ANCHOR_DATE} 的 899050 bar 未返回——BJ 指数数据面消失？")
-        self.assertAlmostEqual(c, BJ_INDEX_899050_CLOSE, places=2, msg="899050 close 漂移——服务端格式/数据变更？")
+        self._guard_recent_daily(lambda: self.api.get_index_bars(4, 2, "899050", 0, 10), "899050")
 
     def test_bj_security_count(self):
         n = self.api.get_security_count(2)
@@ -156,17 +193,18 @@ class TestBjVipdocGuard(unittest.TestCase):
             self._close_on("bj899050.day", ANCHOR_DATE), BJ_INDEX_899050_CLOSE, places=2,
             msg="899050 离线读数与在线锚点漂移——reader 系数表或缓存格式变化？")
 
-    def test_vipdoc_821001_mismatch_pinned(self):
-        """82 段转债系数坑现状钉住：离线 10074.4（错 100 倍，在线口径 100.744）。"""
-        c = self._close_on("bj821001.day", BJ_BOND_821001_DATE)
+    def test_vipdoc_821001_preferred_close(self):
+        """82 段优先股（821xxx）离线读数 = 在线日线口径 100.744（2026-10-19 系数修复后）。"""
+        c = self._close_on("bj821001.day", BJ_PREFERRED_821001_DATE)
         self.assertAlmostEqual(
-            c, BJ_BOND_821001_PINNED_CLOSE, places=1,
-            msg="821001 离线读数变化——若 82 段系数坑已修复（好事），把断言更新为在线口径 100.744")
+            c, BJ_PREFERRED_821001_CLOSE, places=2,
+            msg="821001 离线读数漂移——BJ_PREFERRED 系数或缓存格式变化？")
 
-    def test_vipdoc_810011_bond_raise(self):
-        """81 段未登记按纪律 raise——若不再 raise 说明段表被改动，需复核。"""
-        with self.assertRaises(NotImplementedError):
-            self.reader.get_df(str(VIPDOC_BJ_LDAY / "bj810011.day"))
+    def test_vipdoc_810011_bond_close(self):
+        """810 段定向可转债（官方编制指引 810=定转）：vipdoc raw×10000 → 100.0 面值。"""
+        c = self._close_on("bj810011.day", "2026-04-07")
+        self.assertAlmostEqual(c, 100.0, places=2,
+                               msg="810011 离线读数漂移——BJ_BOND 系数或缓存格式变化？")
 
     def test_vipdoc_bj_segment_distribution(self):
         """BJ 段分布下限守护（92×349/82×10/89×2/81×2，2026-09-27 基线，只增不减）。"""

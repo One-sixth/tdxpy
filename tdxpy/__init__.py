@@ -1,7 +1,7 @@
 __version__ = "0.2.7"
 __author__ = "bopo.wang <ibopo@126.com>"
 
-__all__ = ["TdxClient", "Affair", "ExMarket", "StdMarket", "ex_market_table"]
+__all__ = ["TdxClient", "ServerPool", "Affair", "ExMarket", "StdMarket", "ex_market_table"]
 
 
 def __getattr__(name):
@@ -11,6 +11,10 @@ def __getattr__(name):
         from tdxpy.client import TdxClient
 
         return TdxClient
+    if name == "ServerPool":
+        from tdxpy.pool import ServerPool
+
+        return ServerPool
     if name == "Affair":
         from tdxpy.affair import Affair
 

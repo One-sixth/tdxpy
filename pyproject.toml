@@ -45,7 +45,7 @@ pytest-datadir = "^1.5.0"
 pytest = "^8.0.0"
 pytest-cov = "^4.1.0"
 
-[tool.pytest.ini_option]
+[tool.pytest.ini_options]
 testpaths = "tests"
 addopts = "-p no:warnings"
 log_cli_level = "DEBUG"
@@ -90,11 +90,6 @@ exclude_lines = [
   "raise NotImplementedError",
   "def __repr__"
 ]
-
-
-[tool.pytest.ini_options]
-testpaths = "tests"
-addopts = "-p no:warnings"
 
 
 [build-system]

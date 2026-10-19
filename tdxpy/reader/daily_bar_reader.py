@@ -31,13 +31,17 @@ class TdxDailyBarReader(BaseReader):
         "SH_B_STOCK",
         "SH_INDEX",
         "SH_FUND",
+        "SH_PREFERRED",
         "SH_BOND",
         "SZ_A_STOCK",
         "SZ_B_STOCK",
         "SZ_INDEX",
         "SZ_FUND",
+        "SZ_PREFERRED",
         "SZ_BOND",
         "BJ_STOCK",
+        "BJ_BOND",
+        "BJ_PREFERRED",
         "BJ_INDEX",
     ]
 
@@ -47,13 +51,20 @@ class TdxDailyBarReader(BaseReader):
         "SH_B_STOCK": [0.001, 0.01],
         "SH_INDEX": [0.01, 1.0],
         "SH_FUND": [0.001, 1.0],
-        "SH_BOND": [0.001, 1.0],
+        # 2026-11-05 同步：09-17 债券系数修复当时漏了本副本（0.001 旧值残留致离线读债券价格 ×10）；
+        # 本批段登记超集（12 债券段+优先股）一并吸收——与 tdxpy.constants.SECURITY_COEFFICIENT 保持一致
+        "SH_BOND": [0.0001, 1.0],
         "SZ_A_STOCK": [0.01, 0.01],
         "SZ_B_STOCK": [0.01, 0.01],
         "SZ_INDEX": [0.01, 1.0],
         "SZ_FUND": [0.001, 0.01],
-        "SZ_BOND": [0.001, 0.01],
+        "SZ_BOND": [0.0001, 0.01],
+        "SZ_PREFERRED": [0.01, 0.01],
+        "SH_PREFERRED": [0.01, 0.01],
         "BJ_STOCK": [0.01, 0.01],
+        # 2026-10-19 登记：810 定向可转债 / 82 优先股，vipdoc raw×10000（贴面值 100），vol/amount 口径与在线一致
+        "BJ_BOND": [0.0001, 1.0],
+        "BJ_PREFERRED": [0.0001, 1.0],
         "BJ_INDEX": [0.01, 1.0],
     }
 
@@ -196,12 +207,19 @@ class TdxDailyBarReader(BaseReader):
             if code_head in ["15", "16", "18"]:  # 18=REITs（1801xx，与 helper 09-17 实测版对齐）
                 return "SZ_FUND"
 
-            if code_head in ["10", "11", "12", "13", "14"]:
+            if code_head == "14":  # 2026-11-05 同步 helper：14 段实为优先股（曾误吞 SZ_BOND ×100 偏差）
+                return "SZ_PREFERRED"
+
+            # 2026-11-05 同步 helper 段登记超集（地方债/ABS/公司债，dp=4）
+            if code_head in ["10", "11", "12", "13", "19", "50", "52", "56"]:
                 return "SZ_BOND"
 
         if exchange == self.SECURITY_EXCHANGE[1]:
-            if code_head in ["60", "68"]:  # 688XXX科创板
+            if code_head in ["60", "68", "78"]:  # 688XXX科创板；78=科创板新股申购段（2026-11-05 同步）
                 return "SH_A_STOCK"
+
+            if code_head == "36":  # 2026-11-05 同步 helper：36 段优先股（农行优1）
+                return "SH_PREFERRED"
 
             if code_head in ["90"]:
                 return "SH_B_STOCK"
@@ -212,12 +230,21 @@ class TdxDailyBarReader(BaseReader):
             if code_head in ["50", "51", "52", "53", "55", "56", "58"]:  # 沪市基金全段（与 helper 09-17 实测版对齐；58=科创ETF）
                 return "SH_FUND"
 
-            if code_head in ["01", "10", "11", "12", "13", "14", "20"]:
+            # 2026-11-05 同步 helper 段登记超集（02 贴现国债/15-19/23/24/27 地方债城投公司债；79"资金控制"保持 raise）
+            if code_head in ["01", "02", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "23", "24", "27"]:
                 return "SH_BOND"
 
         if exchange == self.SECURITY_EXCHANGE[2]:
-            if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27=92×349/82×10/89×2/81×2，88/43/83 无文件）
+            if code_head in ["43", "83", "87", "88", "92"]:  # 北交所股票段（92 现役；与 helper 2026-10-19 规测版对齐）
                 return "BJ_STOCK"
+
+            # 2026-10-19 官方规测定性（北证公告〔2024〕20号）：810=定向可转债、820/82=优先股，
+            # vipdoc raw×10000（贴面值 100）；80/811+ 政府债券不登记 raise 防御
+            if basename[:5] == "bj810":
+                return "BJ_BOND"
+
+            if code_head == "82":
+                return "BJ_PREFERRED"
 
             if code_head in ["89"]:  # 89 段指数（899050 北证50 / 899601，系数同 SH_INDEX）
                 return "BJ_INDEX"

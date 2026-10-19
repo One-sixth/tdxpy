@@ -3,6 +3,7 @@ import struct
 from collections import OrderedDict
 
 from tdxpy.parser.base import BaseParser
+from tdxpy.parser.ext.ex_get_instrument_bars import _AMOUNT_MARKETS
 
 
 class GetHistoryInstrumentBarsRange(BaseParser):
@@ -29,6 +30,7 @@ class GetHistoryInstrumentBarsRange(BaseParser):
         pkg.extend(bytearray.fromhex("07 00"))
         pkg.extend(struct.pack("<LL", date, date2))
 
+        self.market = market
         self.send_pkg = pkg
         self.seq_id += 1
 
@@ -44,15 +46,6 @@ class GetHistoryInstrumentBarsRange(BaseParser):
         day = (num % 2048) % 100
 
         return year, month, day
-
-    @staticmethod
-    def _parse_time(num):
-        """
-
-        :param num:
-        :return:
-        """
-        return (num // 60), (num % 60)
 
     def parseResponse(self, body_buf):
         """
@@ -73,10 +66,24 @@ class GetHistoryInstrumentBarsRange(BaseParser):
             (d1, d2, open_price, high, low, close, position, trade, settlementprice) = struct.unpack(
                 "<HHffffIIf", body_buf[pos : pos + 32]
             )  # noqa
+
+            # 24B 数据段与 0x23FF 的 28B 记录逐字节同构（前缀仅日期/时间拆分方式不同），
+            # 第 5 字段同样按市场分型（2026-11-05 交叉复审发现：在线恒等式实锤——
+            # us.AAPL amount/(close×trade)≈1.0、hk.01398 ≈100.0（vol=手））。
+            if self.market in _AMOUNT_MARKETS:
+                # 32B = d1(2) + d2(2) + 24B 数据段；slot5 在数据段 offset 16 = 记录 offset 20
+                (amount,) = struct.unpack("<f", body_buf[pos + 20 : pos + 24])
+                position = 0.0  # 权益类无持仓概念，占位保持列结构
+            else:
+                amount = 0.0  # 期货/期权类：第 5 字段 = 持仓量（协议帧无成交额）
+
             pos += 32
 
             year, month, day = self._parse_date(d1)
-            hour, minute = self._parse_time(d2)
+            # d2 与 0x0B24/0x0C24 的 raw_time 同语义（自 0 点起分钟数，跨日不回绕）：
+            # 美股 1 分钟线凌晨段 hour 会达 24~27，归一化 + day_offset（2026-11-05）
+            day_offset, hour = divmod(d2 // 60, 24)
+            minute = d2 % 60
             kline = OrderedDict(
                 [
                     ("datetime", "%d-%02d-%02d %02d:%02d" % (year, month, day, hour, minute)),
@@ -85,6 +92,7 @@ class GetHistoryInstrumentBarsRange(BaseParser):
                     ("day", day),
                     ("hour", hour),
                     ("minute", minute),
+                    ("day_offset", day_offset),
                     ("open", open_price),
                     ("high", high),
                     ("low", low),
@@ -92,6 +100,7 @@ class GetHistoryInstrumentBarsRange(BaseParser):
                     ("position", position),
                     ("trade", trade),
                     ("settlementprice", settlementprice),  # noqa
+                    ("amount", amount),
                 ]
             )
 

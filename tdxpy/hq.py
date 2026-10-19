@@ -18,6 +18,7 @@ from tdxpy.parser.std.get_block_info import GetBlockInfoMeta
 from tdxpy.parser.std.get_block_info import get_and_parse_block_info
 from tdxpy.parser.std.get_company_info_category import GetCompanyInfoCategory
 from tdxpy.parser.std.get_company_info_content import GetCompanyInfoContent
+from tdxpy.parser.std.get_delisted_bars import GetDelistedBarsCmd
 from tdxpy.parser.std.get_finance_info import GetFinanceInfo
 from tdxpy.parser.std.get_history_minute_time_data import GetHistoryMinuteTimeData
 from tdxpy.parser.std.get_history_transaction_data import GetHistoryTransactionData
@@ -75,6 +76,22 @@ class TdxHq_API(BaseSocketClient):  # noqa
         """
         cmd = self._cmd(GetIndexBarsCmd)
         cmd.setParams(category, market, code, start, count, adjust=adjust)
+
+        return cmd.call_api()
+
+    @last_ack_time
+    def get_delisted_bars(self, market, code, start=0, count=800):
+        """
+        退市股不复权日线（0x052B，2026-10 自 eltdx 移植）
+
+        :param market: 市场（0=SZ 1=SH 2=BJ）
+        :param code: 6 位数字代码
+        :param start: 起始偏移（0=最新一根，向前翻页递增，语义同 get_security_bars）
+        :param count: 条数（≤800）
+        :return: OrderedDict 列表，布局同 get_security_bars（hour/minute 恒 0）
+        """
+        cmd = self._cmd(GetDelistedBarsCmd)
+        cmd.setParams(market, code, start, count)
 
         return cmd.call_api()
 
@@ -159,26 +176,18 @@ class TdxHq_API(BaseSocketClient):  # noqa
         """
         获取当日分时数据（240 条）。
 
-        2026-09-16 父Agent 审查改版：新式握手会话下 0x0523 实时分时响应已升级
-        为新格式（头部插入 market+code 等字段，旧 skip=4 解析错位导致价格跑飞），
-        故 new 模式与 easy_tdx 同策略改走 0x0FB4 历史分时接口（传当天日期，
-        实测价格与 easy_tdx 基准一致）；老 0x0523 parser 保留给 legacy 模式
-        （老三条 SETUP 会话下响应仍为旧格式）。
+        2026-10-19：0x051D 新格式已破解并落地 parser（勘误：旧笔记的"0x0523"
+        是笔误，当日分时命令字实为 0x051D）。新式握手会话下响应为
+        [num u16][变长头部 58~75B（market+code ASCII+varint 摘要含 close 锚点）]
+        + 与 0x0FB4 同构的差分记录流；parser 用"扫描记录起点+close 锚点自检"
+        自适应定位，兼容 legacy 旧 6B 头格式。实测 13 品种（A股/ETF/BJ 股/BJ
+        固收）锚点自检全过，价格与 0x0FB4 基准一致。
         :param market:
         :param code:
         :return:
         """
-        if HANDSHAKE_MODE == "legacy":
-            cmd = self._cmd(GetMinuteTimeData)
-            cmd.setParams(market, code)
-
-            return cmd.call_api()
-
-        from datetime import datetime
-
-        today = int(datetime.now().strftime("%Y%m%d"))
-        cmd = self._cmd(GetHistoryMinuteTimeData)
-        cmd.setParams(market, code, today)
+        cmd = self._cmd(GetMinuteTimeData)
+        cmd.setParams(market, code)
 
         return cmd.call_api()
 
@@ -234,10 +243,12 @@ class TdxHq_API(BaseSocketClient):  # noqa
     @last_ack_time
     def get_company_info_category(self, market, code):
         """
-        公司信息类别
-        :param market:
-        :param code:
-        :return:
+        公司信息类别（F10 分类列表）。推荐走门面 `TdxClient.f10_categories`
+        （带分类缓存与 filename_raw 原样回传）。
+
+        :param market: 市场（0=SZ / 1=SH；BJ 不支持）
+        :param code: 代码
+        :return: 条目列表 [{name, filename, filename_raw, start, length}, ...]
         """
         if market == TDXParams.MARKET_BJ:
             warnings.warn("此接口暂时不支持北证A股", DeprecationWarning)
@@ -251,13 +262,15 @@ class TdxHq_API(BaseSocketClient):  # noqa
     @last_ack_time
     def get_company_info_content(self, market, code, filename, start, length):
         """
-        公司信息内容
-        :param market:
-        :param code:
-        :param filename:
-        :param start:
-        :param length:
-        :return:
+        公司信息内容（F10 分类正文）。推荐走门面 `TdxClient.f10_content`。
+
+        :param market: 市场（0=SZ / 1=SH；BJ 不支持）
+        :param code: 代码
+        :param filename: 数据文件名——**推荐传分类响应的 `filename_raw`
+            （GBK 原始 bytes 原样回传）**；str 按 GBK 编码
+        :param start: 数据起始偏移
+        :param length: 数据长度
+        :return: GBK 解码正文（replace，生僻字可见）
         """
         if market == TDXParams.MARKET_BJ:
             warnings.warn("此接口暂时不支持北证A股", DeprecationWarning)

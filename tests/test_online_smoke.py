@@ -13,7 +13,6 @@ import unittest
 
 from tdxpy.exhq import TdxExHq_API
 from tdxpy.hq import TdxHq_API
-from tdxpy.helper import time_frame
 
 HQ_HOST = os.environ.get("TDXPY_TEST_HQ_HOST", "111.229.247.189")
 HQ_PORT = 7709
@@ -77,12 +76,37 @@ class TestHqOnlineSmoke(unittest.TestCase):
         self.assertGreater(len(bars_qfq or []), 0)
         self.assertGreater(len(bars_hfq or []), 0)
 
-    @unittest.skipUnless(time_frame(), "非交易时段当日分时无数据（9:30-11:30/13:00-15:00 内运行）")
     def test_minute_time_data(self):
-        """回归：当日分时不受新握手影响（240 个分钟点）"""
+        """当日分时（0x051D 新格式 parser，2026-10-19 落地）：240 点 + 价格锚点。
+
+        盘后也可测（新 parser 不依赖盘中）：非交易时段服务器仍返回当日全日分时，
+        仅极少数日子返回空（服务器行为）——空时 skip 而非 fail。
+        """
         data = self.api.get_minute_time_data(1, "601919")
-        self.assertIsNotNone(data)
+        if not data:
+            self.skipTest("服务器当日分时返回空（已知服务器行为）")
         self.assertEqual(len(data), 240)
+        # 价格正确性锚点：分时末根 vs 当日日线收盘动态对照（解析错位会产生垃圾价，
+        # 跨日不失效——2026-10-20 修正原固定日期锚点 16.73 的跨日定时炸弹）
+        bars = self.api.get_security_bars(4, 1, "601919", 0, 1)
+        if not bars:
+            self.skipTest("日线锚点不可用")
+        self.assertAlmostEqual(data[-1]["price"], bars[-1]["close"], places=2,
+                               msg="分时 close 与日线 close 漂移——0x051D 解析或数据变更？")
+
+    def test_minute_time_data_bj_preferred_coefficient(self):
+        """BJ 优先股分时系数 0.0001（原 ×100 bug 回归防线）：分时 vs 日线动态对照。"""
+        data = self.api.get_minute_time_data(2, "821001")
+        if not data:
+            self.skipTest("服务器当日分时返回空（已知服务器行为）")
+        self.assertEqual(len(data), 240)
+        # 系数防回归：分时末根 vs 日线收盘动态对照（0.0001 系数若回归为 0.01 会产生
+        # 100 倍偏差；跨日不失效——2026-10-20 修正原固定锚点 100.744 的跨日定时炸弹）
+        bars = self.api.get_security_bars(4, 2, "821001", 0, 1)
+        if not bars:
+            self.skipTest("日线锚点不可用")
+        self.assertAlmostEqual(data[-1]["price"], bars[-1]["close"], places=3,
+                               msg="821001 分时 close 与日线漂移——BJ_PREFERRED 系数或解析回归")
 
     def test_history_minute_time_data(self):
         """回归：历史分时（2020-01-02，601919 当日 240 个分钟点）"""
@@ -122,10 +146,19 @@ class TestExHqOnlineSmoke(unittest.TestCase):
         self.assertGreater(float(bars[-1]["close"]), 0)
 
     def test_history_instrument_bars_range(self):
-        """EX 复活：按日期范围的历史 K 线（苹果主连 2020-01-22，1 分钟粒度）"""
-        bars = self.api.get_history_instrument_bars_range(28, "APL8", 20200122, 20200122)
+        """EX 复活：按日期范围的历史 K 线（苹果主连 APL8，最近已收盘交易日的 1 分钟粒度）。
+
+        锚点动态滚动：EX 历史 1 分钟数据只保留约 1 年，写死 2020-01-22 会随保留窗口
+        推进而失效（2026-11-09 已确认 2020 年日期返回 0 根）。
+        """
+        recent = self.api.get_instrument_bars(4, 28, "APL8", 0, 5)
+        self.assertGreaterEqual(len(recent or []), 2, "APL8 最近日线不足 2 根——数据面消失？")
+        # 2026 新协议下 get_instrument_bars 返回**升序**（旧→新），故 [-2] = 倒数第二个交易日 = T-1（已收盘）。
+        # 若未来协议回归降序，此处语义会变成 T 当天，需同步调整。
+        day = str(recent[-2]["datetime"])[:10].replace("-", "")  # T-1 已收盘，分时完整
+        bars = self.api.get_history_instrument_bars_range(28, "APL8", int(day), int(day))
         self.assertIsNotNone(bars)
-        self.assertGreater(len(bars), 0)
+        self.assertGreater(len(bars), 0, f"EX 历史 K 线 {day} 为空——数据面或锚点日期问题")
 
 
 if __name__ == "__main__":

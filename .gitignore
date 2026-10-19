@@ -179,3 +179,8 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# Local-only artifacts (never commit)
+新特性提案-*.md
+上游更新待吸收-*.md
+# 本地研究产物目录（整目录不追踪：服务器清单 / 逐台探测结果 / 进度日志 / 报告 / 一次性归档脚本）
+/untrack/

@@ -26,7 +26,11 @@ class GetHistoryMinuteTimeData(BaseParser):
 
             pos += 18
 
-            hour = raw_time // 60
+            # raw_time = 自 0 点起的连续分钟数，跨日不回绕（美股夜盘 21:30~次日 04:59
+            # → hour 22~28）。与 0x0B24（ex_get_minute_time_data）同型修复（2026-11-05
+            # 交叉复审发现）：hour 取模归一化 + day_offset 跨日偏移；A 股/港股正常时段
+            # day_offset 恒 0，行为向后兼容。
+            day_offset, hour = divmod(raw_time // 60, 24)
             minute = raw_time % 60
 
             result.append(
@@ -34,6 +38,7 @@ class GetHistoryMinuteTimeData(BaseParser):
                     [
                         ("hour", hour),
                         ("minute", minute),
+                        ("day_offset", day_offset),
                         ("price", price),
                         ("avg_price", avg_price),
                         ("volume", volume),

@@ -33,14 +33,29 @@ In [8]: (len(body)-2)/126
 Out[8]: 64.0
 """
 
+#: 92B setup 握手服务器清单（与 pytdxdata EX_HANDSHAKES 同源情报）。
+#: 2026-10-20 三轮探针 + 交叉复测：
+#:   - 清单内两台 setup 会话全通（52/60 市场清单更广：116.205.143.214 独有
+#:     「更多其它指数 105」、103.221.142.82 有英国股票 75/香港债券 22 等挂牌）；
+#:   - ⚠️ 握手**并非硬互斥**（交叉复测）：setup 机对 0x2454 login 帧也回 299B
+#:     且全功能可用；login 机忽略 setup 帧（无响应）但会话仍正常——误配不致命，
+#:     本清单用于固化各服务器的设计握手语义（稳妥路径），而非可用性开关；
+#:   - 经典 EX 0x23xx 命令（含外盘期货/期权行情）在 5 台服务器上数据面一致；
+#:   - setup 会话不吃 MAC 帧族（0x122E 无响应实测）——故归本池（TdxExHq_API），
+#:     不进 MAC EX 池（TdxMacEx_API，池内服务器须 login + 0x12xx 帧族）。
+#: 其余 EX 服务器一律 0x2454 login（80B）。TdxExHq_API.setup() 按 self.ip 自动选择。
+EX_SETUP_SERVERS = frozenset({"116.205.143.214", "103.221.142.82"})
+
 
 class TdxExHq_API(BaseSocketClient):  # noqa
     def setup(self):
-        if HANDSHAKE_MODE == "legacy":
+        if HANDSHAKE_MODE == "legacy" or self.ip in EX_SETUP_SERVERS:
+            # 92B 老式 setup 帧（ExSetupCmd1 原样发送）：本清单服务器的设计握手。
+            # 交叉复测（2026-10-20）：login 机忽略 setup 帧（无响应）但会话仍可用——
+            # 误配不致命，但按清单选对握手是稳妥路径（语义固化见 EX_SETUP_SERVERS 注释）。
             self._cmd(ExSetupCmd1).call_api()
         else:
-            # 2026+ 现代服务器实测：老 ExSetupCmd1 已失效（服务器不响应，或会话降级导致
-            # 后续 EX 命令全部返回空/被踢）。须用新版 login（cmd 0x2454 + 80 字节 body），
+            # 2026+ 现代 login 服务器：须用新版 login（cmd 0x2454 + 80 字节 body），
             # login 后 EX 全部命令恢复正常，业务命令构包无需改动。
             self._cmd(ExLoginCmd).call_api()
 

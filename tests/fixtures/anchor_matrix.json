@@ -1,0 +1,1229 @@
+{
+ "generated_at": "2026-11-09T15:59:15",
+ "generator": "tools/gen_anchor_matrix.py",
+ "policy": "adjust=0 不复权；双服务器交叉验证；固定日期+固定值",
+ "std_hosts": [
+  "111.229.247.189",
+  "116.205.171.132"
+ ],
+ "ex_hosts": [
+  "139.9.191.175",
+  "116.205.143.214"
+ ],
+ "mac_hosts": [
+  "121.37.207.165",
+  "123.60.47.136"
+ ],
+ "count": 95,
+ "anchors": [
+  {
+   "id": "ex_bar.00700.2010-01-04",
+   "kind": "ex_bar",
+   "market": 31,
+   "code": "00700",
+   "date": "2010-01-04",
+   "expect": {
+    "close": 168.0
+   }
+  },
+  {
+   "id": "ex_bar.00700.2020-03-23",
+   "kind": "ex_bar",
+   "market": 31,
+   "code": "00700",
+   "date": "2020-03-23",
+   "expect": {
+    "close": 348.0
+   }
+  },
+  {
+   "id": "ex_bar.00700.2026-11-06",
+   "kind": "ex_bar",
+   "market": 31,
+   "code": "00700",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 419.8
+   }
+  },
+  {
+   "id": "ex_bar.AAPL.1990-01-02",
+   "kind": "ex_bar",
+   "market": 74,
+   "code": "AAPL",
+   "date": "1990-01-02",
+   "expect": {
+    "close": 37.25
+   }
+  },
+  {
+   "id": "ex_bar.AAPL.2008-09-15",
+   "kind": "ex_bar",
+   "market": 74,
+   "code": "AAPL",
+   "date": "2008-09-15",
+   "expect": {
+    "close": 140.36
+   }
+  },
+  {
+   "id": "ex_bar.AAPL.2026-11-06",
+   "kind": "ex_bar",
+   "market": 74,
+   "code": "AAPL",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 342.37
+   }
+  },
+  {
+   "id": "ex_bar.D05.2026-11-06",
+   "kind": "ex_bar",
+   "market": 78,
+   "code": "D05",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 69.72
+   }
+  },
+  {
+   "id": "ex_bar.HSI.2026-11-06",
+   "kind": "ex_bar",
+   "market": 27,
+   "code": "HSI",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 24481.859
+   }
+  },
+  {
+   "id": "ex_bar.IFL8.2020-01-02",
+   "kind": "ex_bar",
+   "market": 47,
+   "code": "IFL8",
+   "date": "2020-01-02",
+   "expect": {
+    "close": 4160.4
+   }
+  },
+  {
+   "id": "ex_bar.ML8.2020-01-02",
+   "kind": "ex_bar",
+   "market": 29,
+   "code": "ML8",
+   "date": "2020-01-02",
+   "expect": {
+    "close": 2771.0
+   }
+  },
+  {
+   "id": "ex_bar.MSFT.2000-01-03",
+   "kind": "ex_bar",
+   "market": 74,
+   "code": "MSFT",
+   "date": "2000-01-03",
+   "expect": {
+    "close": 116.562
+   }
+  },
+  {
+   "id": "ex_bar.MSFT.2026-11-06",
+   "kind": "ex_bar",
+   "market": 74,
+   "code": "MSFT",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 530.61
+   }
+  },
+  {
+   "id": "ex_bar.RBL8.2020-01-02",
+   "kind": "ex_bar",
+   "market": 30,
+   "code": "RBL8",
+   "date": "2020-01-02",
+   "expect": {
+    "close": 3547.0
+   }
+  },
+  {
+   "id": "ex_bar.RBL8.2026-11-06",
+   "kind": "ex_bar",
+   "market": 30,
+   "code": "RBL8",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 3038.0
+   }
+  },
+  {
+   "id": "ex_bar.RSL8.2020-01-02",
+   "kind": "ex_bar",
+   "market": 28,
+   "code": "RSL8",
+   "date": "2020-01-02",
+   "expect": {
+    "close": 4438.0
+   }
+  },
+  {
+   "id": "ex_bar.SAP.2026-11-06",
+   "kind": "ex_bar",
+   "market": 73,
+   "code": "SAP",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 209.05
+   }
+  },
+  {
+   "id": "ex_range.APL8.2026-11-03",
+   "kind": "ex_range",
+   "market": 28,
+   "code": "APL8",
+   "date": "2026-11-03",
+   "expect": {
+    "n": 225,
+    "first_dt": "2026-11-03 09:01",
+    "last_dt": "2026-11-03 15:00"
+   }
+  },
+  {
+   "id": "ex_range.CUL8.2026-11-03",
+   "kind": "ex_range",
+   "market": 30,
+   "code": "CUL8",
+   "date": "2026-11-03",
+   "expect": {
+    "n": 465,
+    "first_dt": "2026-11-03 21:01",
+    "last_dt": "2026-11-03 15:00"
+   }
+  },
+  {
+   "id": "mac_bar.000001.2026-11-06",
+   "kind": "mac_bar",
+   "market": 0,
+   "code": "000001",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 11.81,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "mac_bar.300750.2026-11-06",
+   "kind": "mac_bar",
+   "market": 0,
+   "code": "300750",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 254.22,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "mac_bar.600000.2020-02-03",
+   "kind": "mac_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2020-02-03",
+   "expect": {
+    "close": 10.47,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "mac_bar.600000.2026-11-06",
+   "kind": "mac_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 10.03,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "mac_bar.600519.2026-11-06",
+   "kind": "mac_bar",
+   "market": 1,
+   "code": "600519",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 1453.0,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "mac_bar.920992.2026-11-06",
+   "kind": "mac_bar",
+   "market": 2,
+   "code": "920992",
+   "date": "2026-11-06",
+   "expect": {
+    "close": 10.65,
+    "amount_pos": true
+   }
+  },
+  {
+   "id": "std_bar.000001.2008-10-28",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000001",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 10.5,
+    "high": 11.75,
+    "low": 10.41,
+    "close": 11.49,
+    "vol": 41883800.0
+   }
+  },
+  {
+   "id": "std_bar.000001.2015-06-12",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000001",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 16.48,
+    "high": 16.63,
+    "low": 16.31,
+    "close": 16.51,
+    "vol": 190338800.0
+   }
+  },
+  {
+   "id": "std_bar.000001.2026-11-06",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000001",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 11.62,
+    "high": 11.85,
+    "low": 11.57,
+    "close": 11.81,
+    "vol": 164027632.0
+   }
+  },
+  {
+   "id": "std_bar.000002.2005-06-06",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000002",
+   "date": "2005-06-06",
+   "expect": {
+    "open": 4.44,
+    "high": 4.62,
+    "low": 4.39,
+    "close": 4.6,
+    "vol": 14491400.0
+   }
+  },
+  {
+   "id": "std_bar.000002.2021-12-31",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000002",
+   "date": "2021-12-31",
+   "expect": {
+    "open": 19.14,
+    "high": 19.97,
+    "low": 19.1,
+    "close": 19.76,
+    "vol": 115918656.0
+   }
+  },
+  {
+   "id": "std_bar.000858.2008-10-28",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000858",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 11.98,
+    "high": 12.68,
+    "low": 11.71,
+    "close": 12.58,
+    "vol": 15291239.0
+   }
+  },
+  {
+   "id": "std_bar.000858.2026-11-06",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "000858",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 75.71,
+    "high": 75.71,
+    "low": 74.72,
+    "close": 75.34,
+    "vol": 22812204.0
+   }
+  },
+  {
+   "id": "std_bar.002594.2011-06-30",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "002594",
+   "date": "2011-06-30",
+   "expect": {
+    "open": 22.0,
+    "high": 26.19,
+    "low": 22.0,
+    "close": 25.45,
+    "vol": 56292536.0
+   }
+  },
+  {
+   "id": "std_bar.002594.2020-02-03",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "002594",
+   "date": "2020-02-03",
+   "expect": {
+    "open": 53.85,
+    "high": 54.48,
+    "low": 53.85,
+    "close": 53.85,
+    "vol": 10039800.0
+   }
+  },
+  {
+   "id": "std_bar.300750.2018-06-11",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "300750",
+   "date": "2018-06-11",
+   "expect": {
+    "open": 30.17,
+    "high": 36.2,
+    "low": 30.17,
+    "close": 36.2,
+    "vol": 78829.0
+   }
+  },
+  {
+   "id": "std_bar.300750.2021-12-31",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "300750",
+   "date": "2021-12-31",
+   "expect": {
+    "open": 598.3,
+    "high": 605.99,
+    "low": 582.0,
+    "close": 588.0,
+    "vol": 9371117.0
+   }
+  },
+  {
+   "id": "std_bar.300750.2026-11-06",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "300750",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 258.78,
+    "high": 269.89,
+    "low": 251.88,
+    "close": 254.22,
+    "vol": 57164792.0
+   }
+  },
+  {
+   "id": "std_bar.399001.2007-10-16",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "399001",
+   "date": "2007-10-16",
+   "expect": {
+    "open": 19139.931,
+    "high": 19435.562,
+    "low": 19092.761,
+    "close": 19358.441,
+    "vol": 33484384.0
+   }
+  },
+  {
+   "id": "std_bar.399001.2015-06-12",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "399001",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 17978.065,
+    "high": 18198.085,
+    "low": 17921.924,
+    "close": 18098.284,
+    "vol": 385071968.0
+   }
+  },
+  {
+   "id": "std_bar.399006.2015-06-12",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "399006",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 3889.16,
+    "high": 3922.7,
+    "low": 3850.59,
+    "close": 3899.71,
+    "vol": 44912716.0
+   }
+  },
+  {
+   "id": "std_bar.399006.2026-11-06",
+   "kind": "std_bar",
+   "market": 0,
+   "code": "399006",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 2438.72,
+    "high": 2506.97,
+    "low": 2438.72,
+    "close": 2465.23,
+    "vol": 189023616.0
+   }
+  },
+  {
+   "id": "std_bar.510050.2005-02-23",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "510050",
+   "date": "2005-02-23",
+   "expect": {
+    "open": 0.881,
+    "high": 0.882,
+    "low": 0.866,
+    "close": 0.876,
+    "vol": 1269742592.0
+   }
+  },
+  {
+   "id": "std_bar.510050.2015-06-12",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "510050",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 3.323,
+    "high": 3.338,
+    "low": 3.27,
+    "close": 3.313,
+    "vol": 1725316096.0
+   }
+  },
+  {
+   "id": "std_bar.510300.2012-05-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "510300",
+   "date": "2012-05-28",
+   "expect": {
+    "open": 2.551,
+    "high": 2.607,
+    "low": 2.544,
+    "close": 2.604,
+    "vol": 1277518720.0
+   }
+  },
+  {
+   "id": "std_bar.510300.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "510300",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 4.113,
+    "high": 4.169,
+    "low": 4.095,
+    "close": 4.124,
+    "vol": 1262937088.0
+   }
+  },
+  {
+   "id": "std_bar.600000.1999-11-10",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "1999-11-10",
+   "expect": {
+    "open": 29.5,
+    "high": 29.8,
+    "low": 27.0,
+    "close": 27.75,
+    "vol": 174084992.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2005-06-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2005-06-06",
+   "expect": {
+    "open": 6.59,
+    "high": 6.72,
+    "low": 6.5,
+    "close": 6.68,
+    "vol": 2844598.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2007-05-30",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2007-05-30",
+   "expect": {
+    "open": 27.5,
+    "high": 31.24,
+    "low": 27.5,
+    "close": 30.69,
+    "vol": 75672176.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2008-10-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 10.81,
+    "high": 12.11,
+    "low": 10.77,
+    "close": 12.1,
+    "vol": 106347912.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2015-06-05",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2015-06-05",
+   "expect": {
+    "open": 19.0,
+    "high": 19.17,
+    "low": 18.02,
+    "close": 18.43,
+    "vol": 362420160.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2016-01-04",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2016-01-04",
+   "expect": {
+    "open": 18.28,
+    "high": 18.28,
+    "low": 17.55,
+    "close": 17.8,
+    "vol": 42240608.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2020-02-03",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2020-02-03",
+   "expect": {
+    "open": 10.22,
+    "high": 10.69,
+    "low": 10.22,
+    "close": 10.47,
+    "vol": 95367384.0
+   }
+  },
+  {
+   "id": "std_bar.600000.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600000",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 9.91,
+    "high": 10.07,
+    "low": 9.84,
+    "close": 10.03,
+    "vol": 64270728.0
+   }
+  },
+  {
+   "id": "std_bar.600030.2008-10-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600030",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 17.18,
+    "high": 19.3,
+    "low": 17.08,
+    "close": 19.1,
+    "vol": 194598320.0
+   }
+  },
+  {
+   "id": "std_bar.600030.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600030",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 25.8,
+    "high": 25.82,
+    "low": 25.5,
+    "close": 25.72,
+    "vol": 73218112.0
+   }
+  },
+  {
+   "id": "std_bar.600036.2008-10-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600036",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 10.93,
+    "high": 12.09,
+    "low": 10.68,
+    "close": 11.8,
+    "vol": 107721280.0
+   }
+  },
+  {
+   "id": "std_bar.600036.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600036",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 42.88,
+    "high": 42.92,
+    "low": 42.46,
+    "close": 42.88,
+    "vol": 92954344.0
+   }
+  },
+  {
+   "id": "std_bar.600519.2001-08-27",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600519",
+   "date": "2001-08-27",
+   "expect": {
+    "open": 34.51,
+    "high": 37.78,
+    "low": 32.85,
+    "close": 35.55,
+    "vol": 40631800.0
+   }
+  },
+  {
+   "id": "std_bar.600519.2008-10-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600519",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 89.92,
+    "high": 94.3,
+    "low": 88.01,
+    "close": 94.28,
+    "vol": 1399519.0
+   }
+  },
+  {
+   "id": "std_bar.600519.2015-06-12",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600519",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 262.12,
+    "high": 273.0,
+    "low": 261.0,
+    "close": 266.0,
+    "vol": 9090952.0
+   }
+  },
+  {
+   "id": "std_bar.600519.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "600519",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 1450.0,
+    "high": 1457.72,
+    "low": 1436.0,
+    "close": 1453.0,
+    "vol": 4284772.0
+   }
+  },
+  {
+   "id": "std_bar.601318.2008-10-28",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "601318",
+   "date": "2008-10-28",
+   "expect": {
+    "open": 20.78,
+    "high": 21.42,
+    "low": 19.9,
+    "close": 20.78,
+    "vol": 115036384.0
+   }
+  },
+  {
+   "id": "std_bar.601318.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "601318",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 54.49,
+    "high": 54.67,
+    "low": 53.8,
+    "close": 54.5,
+    "vol": 55620504.0
+   }
+  },
+  {
+   "id": "std_bar.688981.2020-07-16",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "688981",
+   "date": "2020-07-16",
+   "expect": {
+    "open": 95.0,
+    "high": 95.0,
+    "low": 80.0,
+    "close": 82.92,
+    "vol": 552103872.0
+   }
+  },
+  {
+   "id": "std_bar.688981.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "688981",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 106.0,
+    "high": 113.49,
+    "low": 105.0,
+    "close": 110.9,
+    "vol": 44934856.0
+   }
+  },
+  {
+   "id": "std_bar.899050.2026-10-15",
+   "kind": "std_bar",
+   "market": 2,
+   "code": "899050",
+   "date": "2026-10-15",
+   "expect": {
+    "open": 978.08,
+    "high": 990.54,
+    "low": 963.16,
+    "close": 967.51,
+    "vol": 6892804.0
+   }
+  },
+  {
+   "id": "std_bar.899050.2026-11-06",
+   "kind": "std_bar",
+   "market": 2,
+   "code": "899050",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 871.47,
+    "high": 899.76,
+    "low": 870.74,
+    "close": 888.48,
+    "vol": 7692263.0
+   }
+  },
+  {
+   "id": "std_bar.920992.2026-10-15",
+   "kind": "std_bar",
+   "market": 2,
+   "code": "920992",
+   "date": "2026-10-15",
+   "expect": {
+    "open": 12.76,
+    "high": 12.78,
+    "low": 12.4,
+    "close": 12.46,
+    "vol": 807362.0
+   }
+  },
+  {
+   "id": "std_bar.920992.2026-11-06",
+   "kind": "std_bar",
+   "market": 2,
+   "code": "920992",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 10.44,
+    "high": 10.75,
+    "low": 10.44,
+    "close": 10.65,
+    "vol": 606153.0
+   }
+  },
+  {
+   "id": "std_bar.999999.1999-12-30",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "999999",
+   "date": "1999-12-30",
+   "expect": {
+    "open": 1357.81,
+    "high": 1366.67,
+    "low": 1357.81,
+    "close": 1366.58,
+    "vol": 4029723.0
+   }
+  },
+  {
+   "id": "std_bar.999999.2007-10-16",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "999999",
+   "date": "2007-10-16",
+   "expect": {
+    "open": 6056.95,
+    "high": 6124.04,
+    "low": 6040.71,
+    "close": 6092.06,
+    "vol": 101170960.0
+   }
+  },
+  {
+   "id": "std_bar.999999.2015-06-12",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "999999",
+   "date": "2015-06-12",
+   "expect": {
+    "open": 5143.34,
+    "high": 5178.19,
+    "low": 5103.4,
+    "close": 5166.35,
+    "vol": 625627840.0
+   }
+  },
+  {
+   "id": "std_bar.999999.2026-11-06",
+   "kind": "std_bar",
+   "market": 1,
+   "code": "999999",
+   "date": "2026-11-06",
+   "expect": {
+    "open": 3612.15,
+    "high": 3660.49,
+    "low": 3610.2,
+    "close": 3649.18,
+    "vol": 477042560.0
+   }
+  },
+  {
+   "id": "std_fin.002594",
+   "kind": "std_fin",
+   "market": 0,
+   "code": "002594",
+   "expect": {
+    "ipo_date": 20110630,
+    "province": 18,
+    "industry": 7
+   }
+  },
+  {
+   "id": "std_fin.300750",
+   "kind": "std_fin",
+   "market": 0,
+   "code": "300750",
+   "expect": {
+    "ipo_date": 20180611,
+    "province": 20,
+    "industry": 43
+   }
+  },
+  {
+   "id": "std_fin.600000",
+   "kind": "std_fin",
+   "market": 1,
+   "code": "600000",
+   "expect": {
+    "ipo_date": 19991110,
+    "province": 16,
+    "industry": 1
+   }
+  },
+  {
+   "id": "std_fin.600519",
+   "kind": "std_fin",
+   "market": 1,
+   "code": "600519",
+   "expect": {
+    "ipo_date": 20010827,
+    "province": 29,
+    "industry": 37
+   }
+  },
+  {
+   "id": "std_fin.688981",
+   "kind": "std_fin",
+   "market": 1,
+   "code": "688981",
+   "expect": {
+    "ipo_date": 20200716,
+    "province": 16,
+    "industry": 35
+   }
+  },
+  {
+   "id": "std_fin.920992",
+   "kind": "std_fin",
+   "market": 2,
+   "code": "920992",
+   "expect": {
+    "ipo_date": 20221018,
+    "province": 24,
+    "industry": 9
+   }
+  },
+  {
+   "id": "std_minute.000001.2021-01-04",
+   "kind": "std_minute",
+   "market": 0,
+   "code": "000001",
+   "date": "2021-01-04",
+   "expect": {
+    "n": 240,
+    "first_price": 18.86,
+    "last_price": 18.6
+   }
+  },
+  {
+   "id": "std_minute.600000.2001-02-05",
+   "kind": "std_minute",
+   "market": 1,
+   "code": "600000",
+   "date": "2001-02-05",
+   "expect": {
+    "n": 240,
+    "first_price": 20.9,
+    "last_price": 20.22
+   }
+  },
+  {
+   "id": "std_minute.600000.2015-06-05",
+   "kind": "std_minute",
+   "market": 1,
+   "code": "600000",
+   "date": "2015-06-05",
+   "expect": {
+    "n": 240,
+    "first_price": 19.13,
+    "last_price": 18.43
+   }
+  },
+  {
+   "id": "std_minute.600000.2026-11-06",
+   "kind": "std_minute",
+   "market": 1,
+   "code": "600000",
+   "date": "2026-11-06",
+   "expect": {
+    "n": 240,
+    "first_price": 9.88,
+    "last_price": 10.03
+   }
+  },
+  {
+   "id": "std_minute.600519.2020-02-03",
+   "kind": "std_minute",
+   "market": 1,
+   "code": "600519",
+   "date": "2020-02-03",
+   "expect": {
+    "n": 240,
+    "first_price": 981.0,
+    "last_price": 1003.92
+   }
+  },
+  {
+   "id": "std_minute.899050.2026-11-06",
+   "kind": "std_minute",
+   "market": 2,
+   "code": "899050",
+   "date": "2026-11-06",
+   "expect": {
+    "n": 240,
+    "first_price": 880.41,
+    "last_price": 888.48
+   }
+  },
+  {
+   "id": "std_tick.000001.2021-01-04",
+   "kind": "std_tick",
+   "market": 0,
+   "code": "000001",
+   "date": "2021-01-04",
+   "expect": {
+    "total": 4740,
+    "tolerance": 9,
+    "first_time": "14:17",
+    "last_time": "10:06",
+    "first_price": 18.61,
+    "last_price": 18.74
+   }
+  },
+  {
+   "id": "std_tick.000002.2021-12-31",
+   "kind": "std_tick",
+   "market": 0,
+   "code": "000002",
+   "date": "2021-12-31",
+   "expect": {
+    "total": 4628,
+    "tolerance": 9,
+    "first_time": "14:16",
+    "last_time": "10:01",
+    "first_price": 19.76,
+    "last_price": 19.36
+   }
+  },
+  {
+   "id": "std_tick.600000.2000-06-09",
+   "kind": "std_tick",
+   "market": 1,
+   "code": "600000",
+   "date": "2000-06-09",
+   "expect": {
+    "total": 816,
+    "tolerance": 3,
+    "first_time": "09:35",
+    "last_time": "09:35",
+    "first_price": 24.23,
+    "last_price": 24.2
+   }
+  },
+  {
+   "id": "std_tick.600000.2015-06-05",
+   "kind": "std_tick",
+   "market": 1,
+   "code": "600000",
+   "date": "2015-06-05",
+   "expect": {
+    "total": 1920,
+    "tolerance": 3,
+    "first_time": "13:13",
+    "last_time": "10:17",
+    "first_price": 18.32,
+    "last_price": 18.68
+   }
+  },
+  {
+   "id": "std_tick.600000.2026-11-06",
+   "kind": "std_tick",
+   "market": 1,
+   "code": "600000",
+   "date": "2026-11-06",
+   "expect": {
+    "total": 4094,
+    "tolerance": 8,
+    "first_time": "14:14",
+    "last_time": "09:34",
+    "first_price": 10.05,
+    "last_price": 9.9
+   }
+  },
+  {
+   "id": "std_tick.600519.2015-06-12",
+   "kind": "std_tick",
+   "market": 1,
+   "code": "600519",
+   "date": "2015-06-12",
+   "expect": {
+    "total": 2696,
+    "tolerance": 5,
+    "first_time": "13:48",
+    "last_time": "09:56",
+    "first_price": 269.11,
+    "last_price": 266.56
+   }
+  },
+  {
+   "id": "std_tick.920992.2026-09-23",
+   "kind": "std_tick",
+   "market": 2,
+   "code": "920992",
+   "date": "2026-09-23",
+   "expect": {
+    "total": 1990,
+    "tolerance": 3,
+    "first_time": "11:05",
+    "last_time": "10:02",
+    "first_price": 14.02,
+    "last_price": 12.9
+   }
+  },
+  {
+   "id": "std_xdxr.000001",
+   "kind": "std_xdxr",
+   "market": 0,
+   "code": "000001",
+   "expect": {
+    "n": 81,
+    "first": "1990-03",
+    "last": "2026-09"
+   }
+  },
+  {
+   "id": "std_xdxr.600000",
+   "kind": "std_xdxr",
+   "market": 1,
+   "code": "600000",
+   "expect": {
+    "n": 88,
+    "first": "1999-11",
+    "last": "2026-07"
+   }
+  },
+  {
+   "id": "std_xdxr.600519",
+   "kind": "std_xdxr",
+   "market": 1,
+   "code": "600519",
+   "expect": {
+    "n": 45,
+    "first": "2002-07",
+    "last": "2026-06"
+   }
+  },
+  {
+   "id": "std_xdxr.920992",
+   "kind": "std_xdxr",
+   "market": 2,
+   "code": "920992",
+   "expect": {
+    "n": 30,
+    "first": "2016-02",
+    "last": "2026-05"
+   }
+  }
+ ]
+}
