@@ -139,6 +139,8 @@ c.minute_history(symbol, date="2020-01-02")   # 指定交易日，date 缺省=�
 
 返回：`datetime/price/vol`（EX 品种另含持仓量，期货含夜盘点）。
 
+> 当日分时走 0x051D（2026-10-19 新格式破解落地：响应=变长头部+差分记录流，parser 扫描+close 锚点自检自适应定位，价格与 minute_history 基准一致）。BJ 810 定向可转债 / 82 优先股价格系数 0.0001（vipdoc 与在线分时同口径）。
+
 ### ticks —— 分笔
 
 ```python

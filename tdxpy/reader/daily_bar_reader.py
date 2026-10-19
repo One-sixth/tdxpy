@@ -38,6 +38,8 @@ class TdxDailyBarReader(BaseReader):
         "SZ_FUND",
         "SZ_BOND",
         "BJ_STOCK",
+        "BJ_BOND",
+        "BJ_PREFERRED",
         "BJ_INDEX",
     ]
 
@@ -54,6 +56,9 @@ class TdxDailyBarReader(BaseReader):
         "SZ_FUND": [0.001, 0.01],
         "SZ_BOND": [0.001, 0.01],
         "BJ_STOCK": [0.01, 0.01],
+        # 2026-10-19 登记：810 定向可转债 / 82 优先股，vipdoc raw×10000（贴面值 100），vol/amount 口径与在线一致
+        "BJ_BOND": [0.0001, 1.0],
+        "BJ_PREFERRED": [0.0001, 1.0],
         "BJ_INDEX": [0.01, 1.0],
     }
 
@@ -216,8 +221,16 @@ class TdxDailyBarReader(BaseReader):
                 return "SH_BOND"
 
         if exchange == self.SECURITY_EXCHANGE[2]:
-            if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27=92×349/82×10/89×2/81×2，88/43/83 无文件）
+            if code_head in ["43", "83", "87", "88", "92"]:  # 北交所股票段（92 现役；与 helper 2026-10-19 规测版对齐）
                 return "BJ_STOCK"
+
+            # 2026-10-19 官方规测定性（北证公告〔2024〕20号）：810=定向可转债、820/82=优先股，
+            # vipdoc raw×10000（贴面值 100）；80/811+ 政府债券不登记 raise 防御
+            if basename[:5] == "bj810":
+                return "BJ_BOND"
+
+            if code_head == "82":
+                return "BJ_PREFERRED"
 
             if code_head in ["89"]:  # 89 段指数（899050 北证50 / 899601，系数同 SH_INDEX）
                 return "BJ_INDEX"

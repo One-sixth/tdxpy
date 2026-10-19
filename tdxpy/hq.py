@@ -159,26 +159,18 @@ class TdxHq_API(BaseSocketClient):  # noqa
         """
         获取当日分时数据（240 条）。
 
-        2026-09-16 父Agent 审查改版：新式握手会话下 0x0523 实时分时响应已升级
-        为新格式（头部插入 market+code 等字段，旧 skip=4 解析错位导致价格跑飞），
-        故 new 模式与 easy_tdx 同策略改走 0x0FB4 历史分时接口（传当天日期，
-        实测价格与 easy_tdx 基准一致）；老 0x0523 parser 保留给 legacy 模式
-        （老三条 SETUP 会话下响应仍为旧格式）。
+        2026-10-19：0x051D 新格式已破解并落地 parser（勘误：旧笔记的"0x0523"
+        是笔误，当日分时命令字实为 0x051D）。新式握手会话下响应为
+        [num u16][变长头部 58~75B（market+code ASCII+varint 摘要含 close 锚点）]
+        + 与 0x0FB4 同构的差分记录流；parser 用"扫描记录起点+close 锚点自检"
+        自适应定位，兼容 legacy 旧 6B 头格式。实测 13 品种（A股/ETF/BJ 股/BJ
+        固收）锚点自检全过，价格与 0x0FB4 基准一致。
         :param market:
         :param code:
         :return:
         """
-        if HANDSHAKE_MODE == "legacy":
-            cmd = self._cmd(GetMinuteTimeData)
-            cmd.setParams(market, code)
-
-            return cmd.call_api()
-
-        from datetime import datetime
-
-        today = int(datetime.now().strftime("%Y%m%d"))
-        cmd = self._cmd(GetHistoryMinuteTimeData)
-        cmd.setParams(market, code, today)
+        cmd = self._cmd(GetMinuteTimeData)
+        cmd.setParams(market, code)
 
         return cmd.call_api()
 

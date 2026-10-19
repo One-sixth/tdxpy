@@ -28,6 +28,18 @@ class TestSecurityType(unittest.TestCase):
         self.assertEqual(get_security_type(2, "920992"), "BJ_STOCK")
         self.assertEqual(get_security_type(2, "830799"), "BJ_STOCK")
 
+    def test_bj_bond_and_preferred(self):
+        """2026-10-19 官方规测定性（北证公告〔2024〕20号）：810=定向可转债、82=优先股。"""
+        self.assertEqual(get_security_type(2, "810011"), "BJ_BOND")
+        self.assertEqual(get_security_type(2, "810999"), "BJ_BOND")
+        self.assertEqual(get_security_type(2, "821001"), "BJ_PREFERRED")
+        self.assertEqual(get_security_type(2, "829999"), "BJ_PREFERRED")
+        # 80/811+ 政府债券段不登记（raise 防御）
+        with self.assertRaises(NotImplementedError):
+            get_security_type(2, "800001")
+        with self.assertRaises(NotImplementedError):
+            get_security_type(2, "811001")
+
     def test_fund_fixed_segments(self):
         # 沪市基金全段（原 bug：58 段科创ETF 不在表 → 回退 0.01 → ×10）
         for code in ("510300", "510050", "588000", "563360", "522000", "530000", "550000"):
@@ -58,6 +70,9 @@ class TestCoefficient(unittest.TestCase):
         self.assertEqual(get_security_coefficient(1, "110090"), 0.0001)
         self.assertEqual(get_security_coefficient(0, "127089"), 0.0001)
         self.assertEqual(get_security_coefficient(2, "920992"), 0.01)
+        # 2026-10-19 BJ 固收类登记（vipdoc+在线分时实测 ×10000，贴面值 100）
+        self.assertEqual(get_security_coefficient(2, "810011"), 0.0001)  # 定向可转债
+        self.assertEqual(get_security_coefficient(2, "821001"), 0.0001)  # 优先股
 
     def test_unknown_raises_not_fallback(self):
         with self.assertRaises(NotImplementedError):

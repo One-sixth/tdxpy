@@ -234,8 +234,18 @@ def get_security_type(market, code):
             return "SH_BOND"
 
     if market_id == StdMarket.BJ:
-        if code_head in ["43", "82", "83", "87", "88", "92"]:  # 北交所段（防御性超集；vipdoc 实测 2026-09-27 段分布=92/82/89/81，88/43/83 无文件）
+        if code_head in ["43", "83", "87", "88", "92"]:  # 北交所股票段（92 现役；43/83/87/88 老三板/历史，防御保留）
             return "BJ_STOCK"
+
+        # 2026-10-19 官方规测定性（北证公告〔2024〕20号《证券代码、证券简称编制指引》）：
+        #   810 首三位 = 向特定对象发行可转换公司债券（简称后四位"定转"）；vipdoc 实测 810011/810014 价格贴面值 100、raw×10000
+        #   820 首三位（老版"首两位 82"）= 优先股；vipdoc 现役文件全为 821xxx，同为固收类精度
+        #   80/811+ 号段 = 政府债券（北交所《启用政府债券代码号段的通知》）——不登记，raise 防御
+        if str(code)[:3] == "810":
+            return "BJ_BOND"
+
+        if code_head == "82":
+            return "BJ_PREFERRED"
 
         if code_head in ["89"]:  # 89 段指数（899050 北证50 等，系数同 SH_INDEX）
             return "BJ_INDEX"

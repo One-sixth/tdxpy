@@ -27,18 +27,18 @@ VIPDOC_BJ_LDAY = Path(os.environ.get(
     r"D:\Software\证券\通达信金融终端-量化模拟\vipdoc\bj\lday",
 ))
 
-ANCHOR_DATE = "2026-09-24"
+ANCHOR_DATE = "2026-10-15"
 ANCHOR_TICK_DATE = 20260923
-BJ_STOCK_920992_CLOSE = 12.98
-BJ_INDEX_899050_CLOSE = 1055.74
+BJ_STOCK_920992_CLOSE = 12.46
+BJ_INDEX_899050_CLOSE = 967.51
 BJ_STOCK_920992_TICKS = 1990
 BJ_INDEX_899050_TICKS = 2842
 BJ_SECURITY_COUNT_MIN = 385
 BJ_LIST_BANNER = "北交所（market=2）列表接口被服务器断连"
 BJ_SEG_MIN = {"81": 2, "82": 10, "89": 2, "92": 349}
-BJ_BOND_821001_DATE = "2026-04-27"
-# 82 段系数坑现状钉住：离线读数（错 100 倍）vs 在线口径 100.744。修复 reader 后此锚点应更新。
-BJ_BOND_821001_PINNED_CLOSE = 10074.4
+BJ_PREFERRED_821001_DATE = "2026-04-27"
+# 2026-10-19 系数坑已修复（BJ_PREFERRED 0.0001）：离线/在线分时均应为在线日线口径 100.744
+BJ_PREFERRED_821001_CLOSE = 100.744
 
 
 def _connect_or_skip(api):
@@ -156,17 +156,18 @@ class TestBjVipdocGuard(unittest.TestCase):
             self._close_on("bj899050.day", ANCHOR_DATE), BJ_INDEX_899050_CLOSE, places=2,
             msg="899050 离线读数与在线锚点漂移——reader 系数表或缓存格式变化？")
 
-    def test_vipdoc_821001_mismatch_pinned(self):
-        """82 段转债系数坑现状钉住：离线 10074.4（错 100 倍，在线口径 100.744）。"""
-        c = self._close_on("bj821001.day", BJ_BOND_821001_DATE)
+    def test_vipdoc_821001_preferred_close(self):
+        """82 段优先股（821xxx）离线读数 = 在线日线口径 100.744（2026-10-19 系数修复后）。"""
+        c = self._close_on("bj821001.day", BJ_PREFERRED_821001_DATE)
         self.assertAlmostEqual(
-            c, BJ_BOND_821001_PINNED_CLOSE, places=1,
-            msg="821001 离线读数变化——若 82 段系数坑已修复（好事），把断言更新为在线口径 100.744")
+            c, BJ_PREFERRED_821001_CLOSE, places=2,
+            msg="821001 离线读数漂移——BJ_PREFERRED 系数或缓存格式变化？")
 
-    def test_vipdoc_810011_bond_raise(self):
-        """81 段未登记按纪律 raise——若不再 raise 说明段表被改动，需复核。"""
-        with self.assertRaises(NotImplementedError):
-            self.reader.get_df(str(VIPDOC_BJ_LDAY / "bj810011.day"))
+    def test_vipdoc_810011_bond_close(self):
+        """810 段定向可转债（官方编制指引 810=定转）：vipdoc raw×10000 → 100.0 面值。"""
+        c = self._close_on("bj810011.day", "2026-04-07")
+        self.assertAlmostEqual(c, 100.0, places=2,
+                               msg="810011 离线读数漂移——BJ_BOND 系数或缓存格式变化？")
 
     def test_vipdoc_bj_segment_distribution(self):
         """BJ 段分布下限守护（92×349/82×10/89×2/81×2，2026-09-27 基线，只增不减）。"""
